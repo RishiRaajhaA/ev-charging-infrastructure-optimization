@@ -91,20 +91,23 @@ The repository provides **two distinct interfaces** tailored for both executive 
 
 ## 📸 Visual Showcase
 
-### Glassmorphic Operations Dashboard
-![Dashboard Preview](assets/dashboard.png)
+### Executive Network Dashboard
+![Executive Network Dashboard](assets/Executive%20Network%20Dashboard.png)
 
 ### Optimization 1: Charging Hub Location & Geospatial Coverage
-![Optimization 1 Preview](assets/optimization-1.png)
+![Optimization 1](assets/Optimization%201.png)
 
 ### Optimization 2: Regional Connector Allocation & Equity Curve
-![Optimization 2 Preview](assets/optimization-2.png)
+![Optimization 2](assets/Optimization%202.png)
 
-### Dataset Statistics & Regional Breakdown
-![Statistics Preview](assets/statistics.png)
+### Strategic Scenario Comparator
+![Strategic Scenario Comparator](assets/Strategic%20Scenario%20Comparator.png)
 
-### Interactive Data Explorer
-![Data Explorer Preview](assets/data-explorer.png)
+### Data Explorer & Geospatial Studio
+![Data Explorer & Geospatial Studio](assets/Data%20Explorer%20&%20Geospatial%20Studio.png)
+
+### Operations Research Formulations
+![Operations Research Formulations](assets/Operations%20Research%20Formulations.png)
 
 ---
 
@@ -120,21 +123,36 @@ To ensure proposed hubs reside at realistic, observed geographic locations, the 
 
 #### Pairwise Great-Circle Distance
 Distances between all stations $i$ and candidate hubs $j$ are calculated via the Haversine formula:
-$$d(i, j) = 2 R_{\text{earth}} \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_i)\cos(\phi_j)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right)$$
 
-Let the coverage adjacency matrix be:
-$$A_{ij} = \begin{cases} 1 & \text{if } d(i, j) \le R \\ 0 & \text{otherwise} \end{cases}$$
+$$
+d(i, j) = 2 R_{\text{earth}} \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_i)\cos(\phi_j)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right)
+$$
+
+Let the coverage adjacency matrix $A_{ij}$ be:
+
+$$
+A_{ij} = \begin{cases} 
+1 & \text{if } d(i, j) \le R \\ 
+0 & \text{otherwise} 
+\end{cases}
+$$
 
 #### MIP Formulation
-$$\max \quad \sum_{i=1}^{N} z_i$$
+
+$$
+\max \quad \sum_{i=1}^{N} z_i
+$$
 
 **Subject to:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 z_i &\le \sum_{j=1}^{M} A_{ij} y_j && \forall i \in \{1, \dots, N\} \quad \text{(Coverage Adjacency)} \\
 \sum_{j=1}^{M} y_j &\le K && \text{(Hub Budget Limit)} \\
 y_j &\in \{0, 1\} && \forall j \in \{1, \dots, M\} \quad \text{(Hub Selection)} \\
 z_i &\in [0, 1] && \forall i \in \{1, \dots, N\} \quad \text{(Station Covered)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 
@@ -144,15 +162,21 @@ z_i &\in [0, 1] && \forall i \in \{1, \dots, N\} \quad \text{(Station Covered)}
 Given $R$ administrative regions with existing stations $S_i$ and existing connectors $C_i$, distribute a budget of $B$ additional connectors to maximize the minimum post-allocation **Connectors-Per-Station (CPS)** ratio across all regions (Max-Min Fairness).
 
 #### MILP Formulation
-$$\max \quad t$$
+
+$$
+\max \quad t
+$$
 
 **Subject to:**
-$$\begin{aligned}
+
+$$
+\begin{aligned}
 C_i + x_i &\ge t \cdot S_i && \forall i \in \{1, \dots, R\} \quad \text{(Regional CPS Floor)} \\
 \sum_{i=1}^{R} x_i &= B && \text{(Total Connector Budget)} \\
 x_i &\in \mathbb{Z}_{\ge 0} && \forall i \in \{1, \dots, R\} \quad \text{(Integer Additions)} \\
 t &\ge 0 && \text{(Minimum Target Ratio)}
-\end{aligned}$$
+\end{aligned}
+$$
 
 #### Budget vs. Minimum CPS Response:
 ```
@@ -208,15 +232,17 @@ Operations Research/
 ├── requirements.txt                         # Unified Python Dependencies
 ├── README.md                                # Comprehensive Project Documentation
 ├── .gitignore                               # Git Rules for Python & Build Artifacts
+├── generate_dataset_visuals.py              # Visual Chart Generation Script
 ├── First_Review_Presentation.md             # Review Presentation Notes
 ├── mid_review_presentation.tex              # LaTeX Beamer Mid-Review Slide Deck
 │
-├── assets/                                  # Application Screenshots & Visualization Plots
-│   ├── dashboard.png
-│   ├── optimization-1.png
-│   ├── optimization-2.png
-│   ├── statistics.png
-│   ├── data-explorer.png
+├── assets/                                  # High-Res Screenshots & Visual Assets
+│   ├── Executive Network Dashboard.png
+│   ├── Optimization 1.png
+│   ├── Optimization 2.png
+│   ├── Strategic Scenario Comparator.png
+│   ├── Data Explorer & Geospatial Studio.png
+│   ├── Operations Research Formulations.png
 │   ├── dataset_geo_map.png
 │   └── dataset_top_regions.png
 │
@@ -246,6 +272,7 @@ Operations Research/
     │   ├── routes/
     │   │   ├── data_routes.py               # Data Ingestion & Statistics Endpoints
     │   │   ├── opt1_routes.py               # Optimization 1 Solver Endpoints
+    │   │   └── opt2_routes.py               # Optimization 2 Solver Endpoints
     │   └── services/
     │       ├── data_service.py              # Data Caching & Metric Compute Service
     │       └── solver_service.py            # Mathematical Solvers Bridge
