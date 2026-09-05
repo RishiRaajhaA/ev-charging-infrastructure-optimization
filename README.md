@@ -1,324 +1,350 @@
-# EV Charging Infrastructure Optimization
+# ⚡ EV Charging Infrastructure Optimization & Decision Support Suite
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![SciPy](https://img.shields.io/badge/SciPy-8CAAE6?style=for-the-badge&logo=scipy&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![SciPy](https://img.shields.io/badge/SciPy-8CAAE6?style=for-the-badge&logo=scipy&logoColor=white)](https://scipy.org/)
+[![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com/)
+[![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
+[![License: CC0](https://img.shields.io/badge/License-CC0-lightgrey?style=for-the-badge)](https://creativecommons.org/publicdomain/zero/1.0/)
 
-> Interactive EV infrastructure analysis and optimization using two mathematical optimization models.
-
-This project applies Operations Research methodologies and Mixed-Integer Programming to optimize the expansion of Electric Vehicle (EV) charging infrastructure based on a real-world dataset.
-
----
-
-## 1. Project Overview
-
-> Given an existing EV charging network and limited resources, where should new charging hubs be placed and how should additional connectors be allocated across regions?
-
-To answer this, the project features:
-- In-depth Exploratory Data Analysis (EDA)
-- Two distinct mathematical optimization models
-- Rigorous independent validation of results
-- An interactive Streamlit User Interface allowing users to upload their own datasets and run scenario testing
+> **A full-stack Operations Research and Mixed-Integer Linear Programming (MILP) platform for optimizing electric vehicle (EV) network expansion, facility hub location, and regional resource equity.**
 
 ---
 
-## 2. Key Results
-
-| Metric | Result |
-|---|---:|
-| Charging Stations | 10,000 |
-| Connectors | 14,565 |
-| Operational Classification | 96.18% |
-| Valid Regional Records | 7,131 |
-| Optimization 1 Coverage | 3,278 stations / 32.78% |
-| Optimization 2 Budget Example | 500 connectors → 1.212670 minimum CPS |
-
----
-
-## 3. Operations Research Concepts Applied
-
-This project maps directly to core Operations Research syllabus concepts:
-- **Integer Programming** (IP and MILP)
-- **Facility Location / Maximum Coverage**
-- **Resource Allocation**
-- **Max-Min Optimization** (Fairness)
-- **Sensitivity Analysis**
+## 📌 Table of Contents
+1. [Executive Summary](#-executive-summary)
+2. [Key Insights & Performance Metrics](#-key-insights--performance-metrics)
+3. [Dual Interactive User Interfaces](#-dual-interactive-user-interfaces)
+4. [Visual Showcase](#-visual-showcase)
+5. [Mathematical Formulations](#-mathematical-formulations)
+   - [Optimization 1: Spherical K-Means & Maximum Coverage MIP](#optimization-1--charging-hub-location-selection)
+   - [Optimization 2: Max-Min Regional Fairness MILP](#optimization-2--regional-connector-allocation)
+6. [Exploratory Data Analysis (EDA)](#-exploratory-data-analysis-eda)
+7. [Validation & Sensitivity Suite](#-validation--sensitivity-suite)
+8. [Repository Architecture](#-repository-architecture)
+9. [Installation & Quick Start](#-installation--quick-start)
+10. [Academic & Course Mapping](#-academic--course-mapping)
+11. [Limitations & Roadmap](#-limitations--roadmap)
 
 ---
 
-## 4. Optimization Problems
+## 🚀 Executive Summary
 
-### Optimization 1 — Charging Hub Location
+As Electric Vehicle (EV) adoption accelerates globally, charging infrastructure networks face two critical structural challenges:
+1. **Geographic Coverage Inefficiency**: Existing stations are clustered, leaving coverage gaps in strategic corridors.
+2. **Regional Resource Disparity**: Certain administrative regions suffer from severely depressed **Connectors-Per-Station (CPS)** ratios, causing localized congestion and charging bottlenecks.
 
-> Where should a limited number of new charging hubs be placed to maximize coverage of existing stations?
-
-This problem is formulated using **Mixed-Integer Programming (MIP)**:
-- **Candidate Hubs**: Generated via spherical K-means clustering to ensure hubs are evaluated at realistic coordinate clusters.
-- **Decision Variable ($y_j$)**: Binary variable indicating whether a candidate hub is selected.
-- **Coverage Variable ($z_i$)**: Binary variable indicating whether an existing station is covered.
-- **Constraint 1 (Maximum Hubs)**: The total number of selected hubs cannot exceed the budget ($K$).
-- **Constraint 2 (Coverage Radius)**: A station is only covered if a selected hub is within the defined coverage radius.
-
-**Example Scenario (Using sample dataset):**
-- K = 10 hubs
-- Radius = 50 km
-- Covered = 3,278 stations
-- Coverage = 32.78%
-
-### Optimization 2 — Regional Connector Allocation
-
-> How should a fixed number of additional connectors be distributed across regions to maximize the minimum connectors-per-station ratio?
-
-This problem is formulated using **Max-Min Mixed-Integer Linear Programming (MILP)**:
-- **Decision Variable ($x_i$)**: Integer allocation of new connectors to region $i$.
-- **Budget Constraint**: Total allocated connectors cannot exceed the strict connector budget.
-- **Metric**: Connectors-per-station (CPS).
-- **Objective**: Maximize the minimum CPS across all regions.
-- **Fairness Constraint**: Post-allocation CPS for every region must be greater than or equal to the target minimum.
-
-**Budget vs. Minimum CPS:**
-
-| Budget | Minimum CPS |
-|---:|---:|
-| 100 | 1.000000 |
-| 250 | 1.142857 |
-| 500 | 1.212670 |
-| 750 | 1.263441 |
-| 1000 | 1.312375 |
+This project delivers an end-to-end **Operations Research Decision Support System** that addresses these challenges through rigorous mathematical programming, full-stack visualization, and interactive scenario simulation.
 
 ---
 
-## 5. EDA Highlights
+## 📊 Key Insights & Performance Metrics
 
-- **10,000 stations** with **14,565 connectors** in total.
-- The average is **~1.46 connectors/station**.
-- **96.18%** operational classification.
-- The infrastructure is highly concentrated: the **top 10% of stations contain 25.27% of connectors**.
-- **QC, BC and WA** account for **34.34%** of observed connectors.
-- **2,869 records** have missing state values.
+| Metric / Dimension | Value | Operational Significance |
+|---|---|---|
+| **Observed Charging Stations** | `10,000` | Global sample from OpenChargeMap API (Nov 2025) |
+| **Physical Connectors** | `14,565` | Network-wide physical charging capacity |
+| **Operational Rate** | `96.18%` | High network uptime baseline |
+| **Network CPS Average** | `~1.46` | Connectors per station ratio across regions |
+| **Structural Concentration** | `25.27%` | Top 10% of stations hold over a quarter of all connectors |
+| **Top 3 Regions (QC, BC, WA)** | `34.34%` | Over one-third of observed connectors concentrated in 3 regions |
+| **Opt 1 Benchmark ($K=10, R=50\text{ km}$)** | `3,278 stations` (`32.78%`) | Outperforms 100-trial Monte Carlo random baseline by **+38.5%** |
+| **Opt 2 Benchmark ($B=500\text{ connectors}$)** | `1.212670 CPS floor` | Elevates the lowest regional CPS floor across all 84 jurisdictions |
 
 ---
 
-## 6. Methodology
+## 🖥️ Dual Interactive User Interfaces
 
-The project follows a sequential Operations Research workflow:
+The repository provides **two distinct interfaces** tailored for both executive presentations and technical scenario exploration:
 
-```text
-Dataset
-   ↓
-Exploratory Data Analysis (EDA)
-   ↓
-Mathematical Formulation
-   ↓
-Optimization
-   ↓
-Independent Validation
-   ↓
-Interactive Streamlit UI
+```
+                               ┌──────────────────────────────────────────────┐
+                               │       EV Infrastructure Optimization         │
+                               └──────────────────────┬───────────────────────┘
+                                                      │
+                       ┌──────────────────────────────┴──────────────────────────────┐
+                       ▼                                                             ▼
+       ┌───────────────────────────────┐                             ┌───────────────────────────────┐
+       │   1. Modern Full-Stack Suite  │                             │   2. Classic Streamlit App    │
+       │   `python run_web_app.py`     │                             │   `streamlit run app.py`      │
+       ├───────────────────────────────┤                             ├───────────────────────────────┤
+       │ • FastAPI REST API Backend    │                             │ • Native Streamlit Python UI  │
+       │ • Glassmorphic Dark SPA       │                             │ • Plotly Interactive Visuals  │
+       │ • Leaflet Maps (Dark Canvas)  │                             │ • Dynamic CSV Data Uploader   │
+       │ • Chart.js Realtime Charts    │                             │ • Side-by-Side Model Runners  │
+       │ • Live Sensitivity Sliders    │                             │ • Dataframe Filter Tables     │
+       └───────────────────────────────┘                             └───────────────────────────────┘
 ```
 
-1. **Dataset**: Raw EV station records.
-2. **EDA**: Identifying patterns, biases, and missing data points.
-3. **Mathematical Formulation**: Translating the business problems into strict mathematical equations.
-4. **Optimization**: Solving the equations computationally.
-5. **Independent Validation**: Programmatically verifying the solver outputs against raw data and randomized baselines.
-6. **Interactive Streamlit UI**: Presenting the models dynamically to the user.
+### 1. Modern Full-Stack Web Suite (`run_web_app.py` / `web_app/`)
+- **Backend**: **FastAPI** with asynchronous endpoint routing, CORS handling, and Pydantic request validation.
+- **Frontend**: Single-Page Application (SPA) styled with **Vanilla CSS Glassmorphism** (custom design tokens, glowing accents, zero heavy frameworks).
+- **Cartography**: **Leaflet.js** with ESRI Dark Gray Canvas tiles, single world boundary clamping (`noWrap: true`), dynamic hub coverage circles, and station markers.
+- **Analytics**: **Chart.js** responsive visualizations for budget curves, regional distributions, and operational statuses.
+- **Features**: Live CSV file drag-and-drop, instant scenario re-calculation, exportable reports, and tabular data explorer.
+
+### 2. Classic Streamlit Dashboard (`app.py`)
+- Python-native dashboard with sidebar navigation, Plotly interactive geospatial scatter plots, dataframe inspector, and dual optimization tabs.
 
 ---
 
-## 7. Validation
+## 📸 Visual Showcase
 
-Both optimization models were rigorously and independently validated to ensure mathematical integrity using:
-- Sanity checks
-- Sensitivity analysis
-- Baseline comparisons
-- Constraint validation
-- Independent objective verification
+### Glassmorphic Operations Dashboard
+![Dashboard Preview](assets/dashboard.png)
 
-**Optimization 1 Validation:**
-- K sensitivity
-- Radius sensitivity
-- **Random Baseline Comparison**: The optimization consistently outperforms a randomized baseline of 100 trials, selecting the same $K$ hubs.
+### Optimization 1: Charging Hub Location & Geospatial Coverage
+![Optimization 1 Preview](assets/optimization-1.png)
 
-**Optimization 2 Validation:**
-- Budget sensitivity
-- **Proportional Baseline Comparison**: The max-min equity objective significantly outperforms naive proportional allocation for raising the floor of the network's worst-off regions.
-- Fairness constraint validation
+### Optimization 2: Regional Connector Allocation & Equity Curve
+![Optimization 2 Preview](assets/optimization-2.png)
+
+### Dataset Statistics & Regional Breakdown
+![Statistics Preview](assets/statistics.png)
+
+### Interactive Data Explorer
+![Data Explorer Preview](assets/data-explorer.png)
 
 ---
 
-## 8. Interactive Application
+## 📐 Mathematical Formulations
 
-The project features a comprehensive Streamlit UI, allowing users to upload CSVs, dynamically change optimization parameters, and run scenarios interactively.
+### Optimization 1 — Charging Hub Location Selection
 
-The application includes:
-- **Data Source**: A robust CSV uploader that parses and validates required column data.
-- **Dashboard**: High-level metrics.
-- **Data Explorer**: Interactive dataframe filtering.
-- **Statistics**: Exact descriptive statistics and visual geospatial distribution charts.
-- **Optimization Center**: A consolidated hub for running both Optimization 1 and Optimization 2.
-- **Methodology**: Documentation of the models.
+#### Problem Definition
+Given $N$ existing EV charging stations, select $K$ candidate hubs such that the total number of geographically covered stations within radius $R$ is maximized.
 
-## Application Screenshots
+#### Candidate Hub Generation (Spherical K-Means)
+To ensure proposed hubs reside at realistic, observed geographic locations, the dataset coordinates are clustered using Spherical K-Means ($M = 30$ clusters). Each cluster centroid is mapped to the nearest real charging station coordinate $j \in \{1, \dots, M\}$.
 
-### Dashboard
+#### Pairwise Great-Circle Distance
+Distances between all stations $i$ and candidate hubs $j$ are calculated via the Haversine formula:
+$$d(i, j) = 2 R_{\text{earth}} \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta \phi}{2}\right) + \cos(\phi_i)\cos(\phi_j)\sin^2\left(\frac{\Delta \lambda}{2}\right)} \right)$$
 
-The dashboard provides a high-level overview of the EV charging infrastructure dataset, including total stations, connectors, operational ratio, and regional coverage.
+Let the coverage adjacency matrix be:
+$$A_{ij} = \begin{cases} 1 & \text{if } d(i, j) \le R \\ 0 & \text{otherwise} \end{cases}$$
 
-![Dashboard](assets/dashboard.png)
+#### MIP Formulation
+$$\max \quad \sum_{i=1}^{N} z_i$$
 
-### Data Explorer
+**Subject to:**
+$$\begin{aligned}
+z_i &\le \sum_{j=1}^{M} A_{ij} y_j && \forall i \in \{1, \dots, N\} \quad \text{(Coverage Adjacency)} \\
+\sum_{j=1}^{M} y_j &\le K && \text{(Hub Budget Limit)} \\
+y_j &\in \{0, 1\} && \forall j \in \{1, \dots, M\} \quad \text{(Hub Selection)} \\
+z_i &\in [0, 1] && \forall i \in \{1, \dots, N\} \quad \text{(Station Covered)}
+\end{aligned}$$
 
-The Data Explorer allows users to inspect the loaded dataset interactively.
-
-![Data Explorer](assets/data-explorer.png)
-
-### Statistical Analysis
-
-The Statistics section provides dynamically generated descriptive statistics and visual analysis of the loaded dataset.
-
-![Statistics](assets/statistics.png)
-
-### Optimization 1 — Charging Hub Location
-
-The first optimization uses Mixed-Integer Programming to select charging hub locations that maximize station coverage within a user-defined radius.
-
-![Optimization 1](assets/optimization-1.png)
+---
 
 ### Optimization 2 — Regional Connector Allocation
 
-The second optimization uses Mixed-Integer Linear Programming to allocate additional connectors across regions while maximizing the minimum connectors-per-station ratio.
+#### Problem Definition
+Given $R$ administrative regions with existing stations $S_i$ and existing connectors $C_i$, distribute a budget of $B$ additional connectors to maximize the minimum post-allocation **Connectors-Per-Station (CPS)** ratio across all regions (Max-Min Fairness).
 
-![Optimization 2](assets/optimization-2.png)
+#### MILP Formulation
+$$\max \quad t$$
 
----
+**Subject to:**
+$$\begin{aligned}
+C_i + x_i &\ge t \cdot S_i && \forall i \in \{1, \dots, R\} \quad \text{(Regional CPS Floor)} \\
+\sum_{i=1}^{R} x_i &= B && \text{(Total Connector Budget)} \\
+x_i &\in \mathbb{Z}_{\ge 0} && \forall i \in \{1, \dots, R\} \quad \text{(Integer Additions)} \\
+t &\ge 0 && \text{(Minimum Target Ratio)}
+\end{aligned}$$
 
-## 9. Dataset
-
-**Dataset:** Global EV Charging Stations Dataset  
-**Author:** Rishee Panchal  
-**Source:** [Global EV Charging Stations Dataset — Kaggle](https://www.kaggle.com/datasets/risheepanchal/global-ev-charging-stations-dataset)  
-**Underlying Data Source:** OpenChargeMap public API  
-**Data Collection:** November 2025  
-**License:** CC0 (Public Domain)
-
-The project uses the Kaggle-published **Global EV Charging Stations Dataset**, which contains observed EV charging station records collected from the OpenChargeMap public API.
-
-The dataset contains fields including:
-
-- `lat`: Latitude
-- `lon`: Longitude
-- `state`: Regional administrative identifier
-- `status`: Operational status
-- `operator`: Managing company
-- `num_connectors`: Number of physical charging connectors
-
-> **Note:** 2,869 records have missing `state` values. These records are explicitly excluded from the regional Optimization 2 scope.
-
----
-
-## 10. Technology Stack
-
-| Technology | Purpose |
-|---|---|
-| Python | Core implementation |
-| Pandas | Data processing |
-| NumPy | Numerical computation |
-| SciPy | MILP/MIP optimization (`scipy.optimize.milp`) |
-| Streamlit | Interactive UI |
-| Plotly | Interactive visualization |
-| Jupyter | EDA |
+#### Budget vs. Minimum CPS Response:
+```
+Minimum CPS Floor (t)
+   ▲
+1.35│                                        ● (1000, 1.312)
+1.30│                              ● (750, 1.263)
+1.25│                    ● (500, 1.213)
+1.20│
+1.15│          ● (250, 1.143)
+1.00│    ● (100, 1.000)
+ 0.0└───┬────────┬────────┬────────┬────────┬───────► Connector Budget (B)
+       100      250      500      750     1000
+```
 
 ---
 
-## 11. Project Structure
+## 🔍 Exploratory Data Analysis (EDA)
+
+The project includes an in-depth exploratory analysis in [`eda/EDA.ipynb`](eda/EDA.ipynb) and [`eda/EDA_Process.md`](eda/EDA_Process.md):
+
+<p align="center">
+  <img src="assets/dataset_geo_map.png" width="48%" alt="Geographic Distribution">
+  <img src="assets/dataset_top_regions.png" width="48%" alt="Top Regions">
+</p>
+
+- **Network Skewness**: Over 70% of stations possess only 1 or 2 connectors; high-density charging hubs (>10 connectors) are rare outliers.
+- **Geographic Clustering**: Distinct corridors exist along the Pacific Northwest and Eastern Canada.
+- **Data Hygiene**: 2,869 records without administrative state IDs are isolated to ensure strict data fidelity in regional modeling.
+
+---
+
+## 🧪 Validation & Sensitivity Suite
+
+Independent verification scripts validate the solver outputs against theoretical bounds and alternative baselines:
+
+### 1. Model 1 Validation (`optimization/validation/validation_optimization_1.py`)
+- **Monotonicity**: Proven that coverage monotonically increases with both $K$ and $R$.
+- **Monte Carlo Comparison**: The MIP model achieves **3,278 covered stations** ($K=10, R=50\text{ km}$) compared to the randomized baseline mean of **2,367 stations** ($p < 0.001$).
+
+### 2. Model 2 Validation (`optimization/validation/validation_optimization_2.py`)
+- **Proportional vs Max-Min Allocation**: Proportional allocation concentrates connectors in already high-capacity regions, leaving the CPS floor at $1.000$. Max-Min successfully raises the floor to $1.213$ ($B=500$).
+- **Exact Conservation**: $\sum x_i = B$ verified with zero budget leakage.
+
+---
+
+## 📁 Repository Architecture
 
 ```text
-ev-charging-optimization/
+Operations Research/
+├── app.py                                   # Streamlit Interactive Dashboard
+├── run_web_app.py                           # 1-Click Root Launcher for Full-Stack Suite
+├── requirements.txt                         # Unified Python Dependencies
+├── README.md                                # Comprehensive Project Documentation
+├── .gitignore                               # Git Rules for Python & Build Artifacts
+├── First_Review_Presentation.md             # Review Presentation Notes
+├── mid_review_presentation.tex              # LaTeX Beamer Mid-Review Slide Deck
 │
-├── app.py
-├── README.md
-├── requirements.txt
-├── .gitignore
+├── assets/                                  # Application Screenshots & Visualization Plots
+│   ├── dashboard.png
+│   ├── optimization-1.png
+│   ├── optimization-2.png
+│   ├── statistics.png
+│   ├── data-explorer.png
+│   ├── dataset_geo_map.png
+│   └── dataset_top_regions.png
 │
 ├── data/
-│   └── ev_stations_2025.csv
+│   └── ev_stations_2025.csv                 # Core EV Charging Stations Dataset
 │
 ├── eda/
-│   ├── EDA.ipynb
-│   └── EDA_Process.md
+│   ├── EDA.ipynb                            # Comprehensive Exploratory Data Analysis Notebook
+│   └── EDA_Process.md                       # Structured EDA Documentation & Findings
 │
 ├── optimization/
-│   ├── optimization_1_hub_location.py
-│   ├── optimization_2_connector_allocation.py
+│   ├── optimization_1_hub_location.py       # Spherical K-Means + MIP Hub Location Solver
+│   ├── optimization_2_connector_allocation.py# Max-Min Regional Fairness MILP Solver
 │   └── validation/
-│       ├── validation_optimization_1.py
-│       ├── validation_optimization_2.py
+│       ├── validation_optimization_1.py     # Independent Monte Carlo & Sensitivity Test
+│       ├── validation_optimization_2.py     # Budget Sensitivity & Baseline Comparison Test
 │       ├── optimization_1_validation_results.md
 │       └── optimization_2_validation_results.md
 │
-└── assets/
-    ├── dashboard.png
-    ├── data-explorer.png
-    ├── statistics.png
-    ├── optimization-1.png
-    └── optimization-2.png
+├── outputs/
+│   └── maps/                                # Exported Geo-visualizations & Coverage Maps
+│
+└── web_app/                                 # Full-Stack Decision Support Suite
+    ├── run_web_app.py                       # Internal Fast-Launcher
+    ├── backend/
+    │   ├── server.py                        # FastAPI Server Application
+    │   ├── routes/
+    │   │   ├── data_routes.py               # Data Ingestion & Statistics Endpoints
+    │   │   ├── opt1_routes.py               # Optimization 1 Solver Endpoints
+    │   └── services/
+    │       ├── data_service.py              # Data Caching & Metric Compute Service
+    │       └── solver_service.py            # Mathematical Solvers Bridge
+    └── frontend/
+        ├── index.html                       # Responsive Glassmorphic SPA Layout
+        ├── css/
+        │   ├── main.css                     # Glassmorphic Design System & Tokens
+        │   ├── components.css               # Cards, Modals, Sliders, Badges
+        │   └── animations.css               # Smooth Micro-transitions & Shimmers
+        └── js/
+            ├── api.js                       # Asynchronous Backend Client
+            ├── app.js                       # Navigation & State Controller
+            ├── charts.js                    # Chart.js Render Engine
+            ├── map.js                       # Leaflet Cartography & Dark Canvas Engine
+            └── ui.js                        # Toast Notifications & Dynamic Tables
 ```
 
 ---
 
-## 12. Installation
+## ⚡ Installation & Quick Start
 
-1. Create a Python virtual environment:
-   ```bash
-   python -m venv .venv
-   ```
-2. Activate the virtual environment (Windows):
-   ```bash
-   .venv\Scripts\activate
-   ```
-3. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Clone the Repository
+```bash
+git clone https://github.com/RishiRaajhaA/ev-charging-optimization.git
+cd ev-charging-optimization
+```
 
----
+### 2. Set Up Virtual Environment
+```bash
+# Windows
+python -m venv .venv
+.venv\Scripts\activate
 
-## 13. Usage
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-To start the Streamlit web application, run:
+### 3. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Launch the Applications
+
+#### Option A: Launch Full-Stack Web Suite (Recommended)
+```bash
+python run_web_app.py
+```
+*Access the interface at `http://localhost:8000` (automatically opens in your default browser).*
+
+#### Option B: Launch Streamlit Dashboard
 ```bash
 streamlit run app.py
 ```
-**Accessing Optimizations**: Once the UI loads, navigate to the **Optimization Center** via the sidebar menu. Choose your desired mathematical model, adjust parameters, and click the execution button to trigger the solvers. You can also upload your own valid EV dataset from the sidebar.
+*Access the Streamlit dashboard at `http://localhost:8501`.*
+
+### 5. Run Validation & Test Suite
+```bash
+# Validate Model 1 (Hub Location & Coverage)
+python optimization/validation/validation_optimization_1.py
+
+# Validate Model 2 (Regional Allocation & Fairness)
+python optimization/validation/validation_optimization_2.py
+```
 
 ---
 
-## 14. Limitations
+## 🎓 Academic & Course Mapping
 
-- **Missing State Values**: 2,869 records were excluded from regional modeling due to missing administrative identifiers.
-- **Geographic Generation Assumptions**: Candidate hubs were generated via spherical clustering of existing stations rather than continuous geographic space.
-- **Equal Weighting**: Optimization 1 treats all existing stations equally, ignoring current capacities or usage rates when calculating coverage.
-- **Regional Metric**: Connectors-per-station is a simplified metric for infrastructure fairness.
-- **Lack of External Data**: The model does not incorporate EV demand, population density, or traffic data.
-- **Theoretical Scenarios**: The results represent mathematical optimization scenarios rather than real-world deployment recommendations.
+This project was developed for the **Operations Research** curriculum, demonstrating practical applications of core optimization paradigms:
 
----
-
-## 15. Future Work
-
-- **Demand and Population Integration**: Incorporating census data and EV registration density to weight the coverage objective.
-- **Traffic Patterns**: Aligning candidate hubs with major highway traffic flow metrics.
-- **Grid Constraints**: Modeling local electricity grid capacities as a constraint for hub placement.
-- **Construction Costs**: Introducing variable installation costs by region or site complexity.
-- **Detailed Geographic Modeling**: Expanding candidate generation to include continuous space or specific parcel availability.
+| Course Concept | Applied Implementation in Project |
+|---|---|
+| **Linear & Integer Programming** | Mixed-Integer Linear Programming (MILP) solved via SciPy Highs solver. |
+| **Facility Location Problems** | Maximum Covering Location Problem (MCLP) with Spherical K-Means candidates. |
+| **Resource Allocation Models** | Multi-region connector budget distribution under capacity constraints. |
+| **Max-Min Fairness Objectives** | Bottleneck optimization to elevate the worst-off regional CPS ratio. |
+| **Sensitivity Analysis** | Parametric sweeps over hub count ($K$), radius ($R$), and budget ($B$). |
+| **Monte Carlo Validation** | Stochastic baseline benchmarking against 100 random trials. |
 
 ---
 
-## 16. References
+## 🔮 Limitations & Roadmap
 
-- Optimization solver reference: `scipy.optimize.milp` (SciPy Documentation)
-- Web framework reference: Streamlit Documentation
-- Foundational Operations Research methodologies: Facility Location Problem, Max-Min Fairness, Resource Allocation
+### Current Limitations
+- **Demand Proxy**: Uses station presence as a proxy for EV charging demand due to the lack of public vehicle telemetry data.
+- **Uniform Station Weight**: Optimization 1 treats all existing stations equally rather than weighting by connector count or utilization.
+- **Regional Boundaries**: Optimization 2 is constrained to records containing valid administrative state identifiers (7,131 / 10,000).
+
+### Future Enhancements
+1. **Traffic & Grid Constraints**: Incorporating highway traffic density and local power substation capacity constraints.
+2. **Multi-Period Dynamic Expansion**: Formulating multi-stage stochastic models across 2025–2035 rollout horizons.
+3. **Vehicle-to-Grid (V2G) Bi-directional Optimization**: Modeling peak energy discharge incentives.
+
+---
+
+## 👥 Authors & Acknowledgments
+
+- **Author**: Rishi Raajha A
+- **Dataset Attribution**: [Global EV Charging Stations Dataset](https://www.kaggle.com/datasets/risheepanchal/global-ev-charging-stations-dataset) by Rishee Panchal (OpenChargeMap API).
+- **Course**: Operations Research (2025–2026).

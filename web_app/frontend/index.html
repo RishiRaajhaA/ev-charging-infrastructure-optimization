@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV OPTIMA — Strategic Decision Support Suite</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Maps CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">⚡</div>
+                <div class="brand-info">
+                    <h1>EV OPTIMA</h1>
+                    <p>Decision Support Suite</p>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li>
+                    <a href="#dashboard" class="nav-item active" data-view="dashboard">
+                        <span class="icon">📊</span>
+                        <span>Executive Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#explorer" class="nav-item" data-view="explorer">
+                        <span class="icon">🗺️</span>
+                        <span>Geospatial Studio</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#opt1" class="nav-item" data-view="opt1">
+                        <span class="icon">📍</span>
+                        <span>Opt 1: Hub Location</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#opt2" class="nav-item" data-view="opt2">
+                        <span class="icon">⚖️</span>
+                        <span>Opt 2: Regional Equity</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#scenarios" class="nav-item" data-view="scenarios">
+                        <span class="icon">🔄</span>
+                        <span>Scenario Comparator</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#methodology" class="nav-item" data-view="methodology">
+                        <span class="icon">📖</span>
+                        <span>OR Methodology</span>
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Sidebar Dataset Card -->
+            <div class="sidebar-footer">
+                <div class="dataset-card">
+                    <div class="dataset-header">
+                        <span class="dataset-title">Active Dataset</span>
+                        <span id="sidebar-dataset-badge" class="dataset-badge sample">Sample</span>
+                    </div>
+                    <div id="sidebar-dataset-filename" class="dataset-filename">ev_stations_2025.csv</div>
+                    <div class="dataset-actions">
+                        <button id="btn-open-upload-modal" class="btn btn-secondary btn-sm" style="flex: 1;">
+                            <span>📁 Upload CSV</span>
+                        </button>
+                        <button id="btn-reset-dataset" class="btn btn-secondary btn-sm" title="Reset to default sample">
+                            <span>↺</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-title-group">
+                    <h2 id="page-title">Executive Network Dashboard</h2>
+                    <p>Operations Research & Decision Science for EV Charging Expansion</p>
+                </div>
+                <div class="header-controls">
+                    <div class="pill-badge green">
+                        <span>●</span> <span>MIP Solvers Ready</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dynamic Content Area -->
+            <main class="content-area">
+                
+                <!-- ================= VIEW 1: DASHBOARD ================= -->
+                <section id="view-dashboard" class="view-section active">
+                    <!-- KPI Metrics Grid -->
+                    <div class="grid-6" style="margin-bottom: 24px;">
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Total Stations</span>
+                                <div class="kpi-icon cyan">⚡</div>
+                            </div>
+                            <div id="kpi-total-stations" class="kpi-value">0</div>
+                            <div class="kpi-sub"><span class="pill-badge cyan">100% Modeled</span></div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Total Connectors</span>
+                                <div class="kpi-icon blue">🔌</div>
+                            </div>
+                            <div id="kpi-total-connectors" class="kpi-value">0</div>
+                            <div class="kpi-sub">Physical Charging Ports</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Avg. Connectors/Station</span>
+                                <div class="kpi-icon green">📈</div>
+                            </div>
+                            <div id="kpi-avg-cps" class="kpi-value">0.00</div>
+                            <div class="kpi-sub">Network Density Baseline</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Operational Ratio</span>
+                                <div class="kpi-icon green">✅</div>
+                            </div>
+                            <div id="kpi-op-ratio" class="kpi-value">0.0%</div>
+                            <div class="kpi-sub">Active & Functional</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">States / Regions</span>
+                                <div class="kpi-icon orange">🏛️</div>
+                            </div>
+                            <div id="kpi-states-count" class="kpi-value">0</div>
+                            <div class="kpi-sub">Administrative Units</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-top">
+                                <span class="kpi-label">Missing-State Records</span>
+                                <div class="kpi-icon pink">⚠️</div>
+                            </div>
+                            <div id="kpi-missing-states" class="kpi-value">0</div>
+                            <div class="kpi-sub">Excluded from Opt 2 Scope</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Grid -->
+                    <div class="grid-2">
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">📊</span>
+                                    <div>
+                                        <h3 class="card-title">Top 10 Regions by Capacity</h3>
+                                        <p class="card-subtitle">Comparison of physical stations and total connectors</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="height: 320px;">
+                                <canvas id="chart-top-regions"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-card">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">🍩</span>
+                                    <div>
+                                        <h3 class="card-title">Operational Health Classification</h3>
+                                        <p class="card-subtitle">Active functioning stations vs offline or unknown</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="height: 320px;">
+                                <canvas id="chart-status-donut"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= VIEW 2: DATA EXPLORER & GEOSPATIAL STUDIO ================= -->
+                <section id="view-explorer" class="view-section">
+                    <!-- Filters Glass Card -->
+                    <div class="glass-card" style="margin-bottom: 24px;">
+                        <div class="card-header" style="margin-bottom: 16px;">
+                            <div class="card-title-group">
+                                <span class="icon">🔍</span>
+                                <div>
+                                    <h3 class="card-title">Multi-Parameter Query & Filters</h3>
+                                    <p class="card-subtitle">Filter dataset dynamically across regional and operational dimensions</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="btn-apply-filters" class="btn btn-primary btn-sm">
+                                    <span>Apply Filters</span>
+                                </button>
+                                <button id="btn-export-explorer" class="btn btn-secondary btn-sm">
+                                    <span>📥 Export Filtered CSV</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid-4">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">State / Region</label>
+                                <select id="filter-state" class="form-select">
+                                    <option value="All">All States / Regions</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Operator</label>
+                                <select id="filter-operator" class="form-select">
+                                    <option value="All">All Operators</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Operational Status</label>
+                                <select id="filter-status" class="form-select">
+                                    <option value="All">All Statuses</option>
+                                    <option value="Operational">Operational Only</option>
+                                    <option value="Non-Operational">Non-Operational Only</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Display Sample Limit</label>
+                                <select id="filter-limit" class="form-select">
+                                    <option value="500">500 Stations</option>
+                                    <option value="1000" selected>1,000 Stations</option>
+                                    <option value="2500">2,500 Stations</option>
+                                    <option value="5000">5,000 Stations</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Studio -->
+                    <div class="glass-card" style="margin-bottom: 24px;">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="icon">🗺️</span>
+                                <div>
+                                    <h3 class="card-title">Interactive Geospatial Distribution Map</h3>
+                                    <p class="card-subtitle">Green = Operational, Red = Inactive/Offline. Click any station for details.</p>
+                                </div>
+                            </div>
+                            <span id="explorer-results-count" class="pill-badge cyan">1,000 shown</span>
+                        </div>
+                        <div id="explorer-map" class="map-container"></div>
+                    </div>
+
+                    <!-- Data Table -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Filtered Station Records</h3>
+                        </div>
+                        <div id="explorer-table-container"></div>
+                    </div>
+                </section>
+
+                <!-- ================= VIEW 3: OPTIMIZATION 1 (HUB LOCATION) ================= -->
+                <section id="view-opt1" class="view-section">
+                    <div class="grid-3" style="margin-bottom: 24px;">
+                        <!-- Controls Card -->
+                        <div class="glass-card" style="grid-column: span 1;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">⚙️</span>
+                                    <div>
+                                        <h3 class="card-title">MIP Parameters</h3>
+                                        <p class="card-subtitle">Facility Location Coverage Model</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Hub Budget (K)</span>
+                                    <span id="opt1-k-val" class="form-label-value">10</span>
+                                </label>
+                                <input type="range" id="opt1-k" class="form-range" min="1" max="50" value="10">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Coverage Radius (R)</span>
+                                    <span id="opt1-radius-val" class="form-label-value">50 km</span>
+                                </label>
+                                <input type="range" id="opt1-radius" class="form-range" min="10" max="300" step="5" value="50">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Spherical K-Means Candidates (M)</span>
+                                    <span id="opt1-candidates-val" class="form-label-value">100</span>
+                                </label>
+                                <input type="range" id="opt1-candidates" class="form-range" min="20" max="250" step="10" value="100">
+                            </div>
+
+                            <button id="btn-run-opt1" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 10px;">
+                                <span>🚀 Run Optimization 1 (MIP)</span>
+                            </button>
+                        </div>
+
+                        <!-- Mathematical Context & Solver Specs -->
+                        <div class="glass-card" style="grid-column: span 2;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">🧮</span>
+                                    <div>
+                                        <h3 class="card-title">Model Specifications & Problem Definition</h3>
+                                        <p class="card-subtitle">Maximal Covering Location Problem (Church & ReVelle, 1974)</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Problem:</strong> Where should we place a limited budget of $K$ high-power regional charging hubs to maximize the number of existing local stations within driving reach (radius $R$)?</p>
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Method:</strong> Candidate hub sites are chosen from real station clusters via 3D Spherical K-Means to ensure physical feasibility. The 0-1 Mixed-Integer Program is solved to guaranteed global optimality via branch-and-cut in <code style="color: var(--primary);">scipy.optimize.milp</code>.</p>
+                                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                                    <button id="btn-opt1-k-sensitivity" class="btn btn-secondary btn-sm">
+                                        <span>📊 Generate K-Sensitivity Curve</span>
+                                    </button>
+                                    <button id="btn-opt1-r-sensitivity" class="btn btn-secondary btn-sm">
+                                        <span>🌐 Generate Radius-Sensitivity Curve</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optimization 1 Output Container -->
+                    <div id="opt1-results-wrapper" style="display: none;">
+                        <!-- Metrics Grid -->
+                        <div class="grid-4" style="margin-bottom: 24px;">
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Hubs Selected</span><div class="kpi-icon cyan">📍</div></div>
+                                <div id="opt1-res-hubs" class="kpi-value">10</div>
+                                <div class="kpi-sub">Optimal Placements</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Coverage Radius</span><div class="kpi-icon blue">⭕</div></div>
+                                <div id="opt1-res-radius" class="kpi-value">50 km</div>
+                                <div class="kpi-sub">Great-Circle Reach</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Covered Stations</span><div class="kpi-icon green">⚡</div></div>
+                                <div id="opt1-res-covered" class="kpi-value">0</div>
+                                <div class="kpi-sub"><span id="opt1-res-rate" class="pill-badge green">0%</span> of Network</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Random Baseline Gain</span><div class="kpi-icon orange">🏆</div></div>
+                                <div id="opt1-bm-improvement" class="kpi-value">+0</div>
+                                <div class="kpi-sub">vs. 100-Trial Monte Carlo (<span id="opt1-bm-random-mean">0</span>)</div>
+                            </div>
+                        </div>
+
+                        <!-- Map Card with Glowing Hubs & Radius Circles -->
+                        <div class="glass-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">✨</span>
+                                    <div>
+                                        <h3 class="card-title">Optimal Hub Locations & Dynamic Coverage Halos</h3>
+                                        <p class="card-subtitle">Pink Stars = Selected Super-Hubs, Cyan Dashed Rings = Service Radius, Gray = Existing Network</p>
+                                    </div>
+                                </div>
+                                <span id="opt1-res-time" class="pill-badge cyan">0.00s runtime</span>
+                            </div>
+                            <div id="opt1-map" class="map-container"></div>
+                        </div>
+
+                        <!-- Hubs Drill-Down Table -->
+                        <div class="glass-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <h3 class="card-title">Selected Super-Hub Placements & Local Catchment</h3>
+                            </div>
+                            <div id="opt1-hubs-table-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Sensitivity Chart Container -->
+                    <div id="opt1-sensitivity-chart-wrapper" class="glass-card" style="display: none; margin-bottom: 24px;">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="icon">📈</span>
+                                <div>
+                                    <h3 class="card-title">Parametric Sensitivity Analysis Curve</h3>
+                                    <p class="card-subtitle">Diminishing marginal coverage returns demonstration</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="height: 340px;">
+                            <canvas id="chart-opt1-sensitivity"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= VIEW 4: OPTIMIZATION 2 (REGIONAL EQUITY) ================= -->
+                <section id="view-opt2" class="view-section">
+                    <div class="grid-3" style="margin-bottom: 24px;">
+                        <!-- Controls Card -->
+                        <div class="glass-card" style="grid-column: span 1;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">⚖️</span>
+                                    <div>
+                                        <h3 class="card-title">MILP Parameters</h3>
+                                        <p class="card-subtitle">Max-Min Fairness Model</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Connector Budget (B)</span>
+                                    <span id="opt2-budget-val" class="form-label-value">500 Connectors</span>
+                                </label>
+                                <input type="range" id="opt2-budget" class="form-range" min="50" max="2500" step="50" value="500">
+                            </div>
+
+                            <div style="margin-bottom: 16px;">
+                                <label class="form-label">Quick Budget Presets:</label>
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+                                    <span class="pill-badge blue budget-preset-pill" data-budget="100" style="cursor: pointer;">100</span>
+                                    <span class="pill-badge blue budget-preset-pill" data-budget="250" style="cursor: pointer;">250</span>
+                                    <span class="pill-badge blue budget-preset-pill" data-budget="500" style="cursor: pointer;">500</span>
+                                    <span class="pill-badge blue budget-preset-pill" data-budget="750" style="cursor: pointer;">750</span>
+                                    <span class="pill-badge blue budget-preset-pill" data-budget="1000" style="cursor: pointer;">1,000</span>
+                                </div>
+                            </div>
+
+                            <button id="btn-run-opt2" class="btn btn-primary btn-lg" style="width: 100%;">
+                                <span>🚀 Run Optimization 2 (MILP)</span>
+                            </button>
+                        </div>
+
+                        <!-- Mathematical Concept -->
+                        <div class="glass-card" style="grid-column: span 2;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">🏛️</span>
+                                    <div>
+                                        <h3 class="card-title">Resource Allocation & Max-Min Fairness Objective</h3>
+                                        <p class="card-subtitle">Raising the floor of the network's most underserved regions</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Problem:</strong> How should $B$ new connectors be distributed across administrative regions to ensure that the region with the lowest connectors-per-station (CPS) ratio is maximized?</p>
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Why Max-Min?</strong> Proportional allocation dumps the vast majority of resources into already dense regions. The Max-Min formulation mathematically guarantees that the most neglected regions receive infrastructure first.</p>
+                                <div style="margin-top: 16px;">
+                                    <button id="btn-opt2-sensitivity" class="btn btn-secondary btn-sm">
+                                        <span>📈 Generate Budget Sensitivity & Monotonicity Curve</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optimization 2 Output Container -->
+                    <div id="opt2-results-wrapper" style="display: none;">
+                        <!-- Metrics Grid -->
+                        <div class="grid-4" style="margin-bottom: 24px;">
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Connector Budget</span><div class="kpi-icon blue">📦</div></div>
+                                <div id="opt2-res-budget" class="kpi-value">500</div>
+                                <div class="kpi-sub">100% Utilized</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Pre-Opt Minimum CPS</span><div class="kpi-icon orange">📉</div></div>
+                                <div id="opt2-res-initial-cps" class="kpi-value">1.0000</div>
+                                <div class="kpi-sub">Worst Regional Floor</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Optimized Floor CPS</span><div class="kpi-icon green">📈</div></div>
+                                <div id="opt2-res-final-cps" class="kpi-value">1.2127</div>
+                                <div class="kpi-sub"><span id="opt2-res-delta" class="pill-badge green">+0.2127</span> Improvement</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Prop. Baseline CPS</span><div class="kpi-icon pink">⚖️</div></div>
+                                <div id="opt2-res-baseline-cps" class="kpi-value">1.0000</div>
+                                <div class="kpi-sub">Targeted Regions: <span id="opt2-res-targeted-count">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Before vs After Comparison Chart -->
+                        <div class="glass-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">📊</span>
+                                    <div>
+                                        <h3 class="card-title">Before vs. After: Connectors-Per-Station (CPS) Across Targeted Regions</h3>
+                                        <p class="card-subtitle">Green bars represent final elevated ratios after optimal MILP allocation</p>
+                                    </div>
+                                </div>
+                                <span id="opt2-res-time" class="pill-badge cyan">0.00s runtime</span>
+                            </div>
+                            <div style="height: 360px;">
+                                <canvas id="chart-opt2-cps-comparison"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Regional Allocation Table -->
+                        <div class="glass-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <h3 class="card-title">Complete Regional Allocation Breakdown</h3>
+                            </div>
+                            <div id="opt2-allocations-table-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Sensitivity Chart -->
+                    <div id="opt2-sensitivity-chart-wrapper" class="glass-card" style="display: none; margin-bottom: 24px;">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="icon">📉</span>
+                                <div>
+                                    <h3 class="card-title">Budget vs. Minimum CPS Monotonicity Curve</h3>
+                                    <p class="card-subtitle">Optimal Max-Min MILP floor vs naive Hamilton Proportional allocation</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="height: 340px;">
+                            <canvas id="chart-opt2-budget-sensitivity"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= VIEW 5: SCENARIO COMPARATOR ================= -->
+                <section id="view-scenarios" class="view-section">
+                    <div class="glass-card" style="margin-bottom: 24px;">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="icon">🔄</span>
+                                <div>
+                                    <h3 class="card-title">Strategic What-If Scenario Comparator</h3>
+                                    <p class="card-subtitle">Save multiple optimization configurations and evaluate tradeoff deltas</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="btn-save-scenario-a" class="btn btn-outline-primary btn-sm">
+                                    <span>💾 Save to Scenario A</span>
+                                </button>
+                                <button id="btn-save-scenario-b" class="btn btn-secondary btn-sm">
+                                    <span>💾 Save to Scenario B</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="kpi-card">
+                                <div class="kpi-top">
+                                    <span class="kpi-label">Scenario Slot A</span>
+                                    <span id="scenario-a-status" class="pill-badge orange">Empty</span>
+                                </div>
+                                <p style="font-size: 0.85rem; color: var(--text-muted);">Run Optimization 1 or 2 and click "Save to Scenario A" to store.</p>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top">
+                                    <span class="kpi-label">Scenario Slot B</span>
+                                    <span id="scenario-b-status" class="pill-badge orange">Empty</span>
+                                </div>
+                                <p style="font-size: 0.85rem; color: var(--text-muted);">Run a second configuration and save to compare tradeoffs.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="scenarios-comparison-content" style="display: none;"></div>
+                </section>
+
+                <!-- ================= VIEW 6: METHODOLOGY & SYLLABUS MAPPING ================= -->
+                <section id="view-methodology" class="view-section">
+                    <div class="glass-card" style="margin-bottom: 24px;">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="icon">📚</span>
+                                <div>
+                                    <h3 class="card-title">Operations Research Formulations & Course Alignment</h3>
+                                    <p class="card-subtitle">Mathematical proofs, decision variable definitions, and syllabus mapping</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                                <h4 style="color: var(--primary); margin-bottom: 10px; font-size: 1.05rem;">📍 Optimization 1 — Maximum Coverage MIP</h4>
+                                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"><strong>Syllabus Category:</strong> Specialized Integer Programming (Facility Location / Set Covering)</p>
+                                <div style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(0,0,0,0.4); padding: 14px; border-radius: 8px; margin-bottom: 12px; line-height: 1.7;">
+                                    <strong>Maximize:</strong> Z = &Sigma; z<sub>i</sub><br>
+                                    <strong>Subject to:</strong><br>
+                                    &bull; &Sigma; y<sub>j</sub> &le; K &nbsp; (Hub budget)<br>
+                                    &bull; z<sub>i</sub> &le; &Sigma;<sub>j&in;N<sub>i</sub></sub> y<sub>j</sub> &nbsp; &forall; i (Coverage radius)<br>
+                                    &bull; y<sub>j</sub>, z<sub>i</sub> &in; {0, 1}
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--text-dim);">Candidate hubs generated via Spherical K-Means clustering on unit-sphere coordinates.</p>
+                            </div>
+
+                            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                                <h4 style="color: var(--secondary); margin-bottom: 10px; font-size: 1.05rem;">⚖️ Optimization 2 — Max-Min Fairness MILP</h4>
+                                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"><strong>Syllabus Category:</strong> Mixed-Integer Linear Programming (Resource Allocation / Sensitivity Analysis)</p>
+                                <div style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(0,0,0,0.4); padding: 14px; border-radius: 8px; margin-bottom: 12px; line-height: 1.7;">
+                                    <strong>Maximize:</strong> Z = t<br>
+                                    <strong>Subject to:</strong><br>
+                                    &bull; (C<sub>i</sub> + x<sub>i</sub>) / S<sub>i</sub> &ge; t &nbsp; &forall; i (Fairness floor)<br>
+                                    &bull; &Sigma; x<sub>i</sub> = B &nbsp; (Connector budget)<br>
+                                    &bull; x<sub>i</sub> &ge; 0 and integer, &nbsp; t &ge; 0
+                                </div>
+                                <p style="font-size: 0.82rem; color: var(--text-dim);">Guarantees Pareto-optimal resource allocation elevating the lowest regional ratio.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Custom CSV Upload Modal -->
+    <div id="modal-upload-dataset" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close">&times;</button>
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 8px;">Upload Custom EV Dataset</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 20px;">Upload a CSV file containing EV station records. Required columns: <code style="color: var(--primary);">lat, lon, state, status, operator, num_connectors</code>.</p>
+            
+            <div class="form-group">
+                <input type="file" id="input-csv-file" accept=".csv" class="form-input" style="padding: 12px;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button id="btn-submit-upload" class="btn btn-primary">Upload & Parse</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Application Scripts -->
+    <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
