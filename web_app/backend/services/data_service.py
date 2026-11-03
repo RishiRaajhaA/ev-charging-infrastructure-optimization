@@ -63,17 +63,27 @@ class DataService:
         df['lat'] = pd.to_numeric(df['lat'], errors='coerce')
         df['lon'] = pd.to_numeric(df['lon'], errors='coerce')
         
-        op_statuses = ['Operational', 'Active', 'Available', 'Online', 'operational']
         if 'status' in df.columns:
-            df['is_operational'] = df['status'].astype(str).str.contains('|'.join(op_statuses), case=False, na=False)
+            status_clean = df['status'].astype(str).str.strip().str.lower()
+            df['is_operational'] = status_clean == 'operational'
+            df['is_offline'] = status_clean.isin(['temporarily unavailable', 'not operational', 'offline'])
+            df['is_planned_unknown'] = ~df['is_operational'] & ~df['is_offline']
         else:
             df['is_operational'] = True
+            df['is_offline'] = False
+            df['is_planned_unknown'] = False
             
         if 'state' in df.columns:
             df['state_clean'] = df['state'].astype(str).str.strip()
             df.loc[df['state'].isna(), 'state_clean'] = np.nan
         else:
             df['state_clean'] = np.nan
+
+        if 'country' in df.columns:
+            df['country_clean'] = df['country'].astype(str).str.strip().str.upper()
+            df.loc[df['country'].isna(), 'country_clean'] = 'UNKNOWN'
+        else:
+            df['country_clean'] = 'UNKNOWN'
             
         if 'operator' not in df.columns:
             df['operator'] = 'Unknown Operator'
@@ -96,6 +106,8 @@ class DataService:
         total_connectors = int(df['num_connectors'].sum())
         avg_connectors = round(float(total_connectors / total_stations), 2) if total_stations > 0 else 0
         operational_count = int(df['is_operational'].sum())
+        offline_count = int(df['is_offline'].sum()) if 'is_offline' in df.columns else 0
+        planned_unknown_count = int(df['is_planned_unknown'].sum()) if 'is_planned_unknown' in df.columns else 0
         operational_ratio = round(float(operational_count / total_stations), 4) if total_stations > 0 else 0
         
         valid_states = df['state_clean'].dropna()
@@ -139,7 +151,7 @@ class DataService:
         # Missing value breakdown
         missing_fields = {
             col: int(df[col].isna().sum())
-            for col in df.columns if col not in ['state_clean', 'is_operational']
+            for col in df.columns if col not in ['state_clean', 'is_operational', 'is_offline', 'is_planned_unknown']
         }
 
         return {
@@ -149,6 +161,8 @@ class DataService:
             "total_connectors": total_connectors,
             "avg_connectors": avg_connectors,
             "operational_count": operational_count,
+            "offline_count": offline_count,
+            "planned_unknown_count": planned_unknown_count,
             "operational_ratio": operational_ratio,
             "num_states": num_states,
             "missing_states": missing_states,
@@ -157,22 +171,28 @@ class DataService:
             "missing_fields": missing_fields
         }
 
-    def get_stations_sample(self, limit: int = 1000, state: str = None, operator: str = None, status: str = None) -> dict:
+    def get_stations_sample(self, limit: int = 1000, country: str = None, state: str = None, operator: str = None, status: str = None) -> dict:
         """Return structured station objects for mapping and explorer table."""
         df = self.current_df.dropna(subset=['lat', 'lon']).copy()
 
+        if country and country != 'All':
+            df = df[df['country_clean'] == country.upper()]
         if state and state != 'All':
             df = df[df['state_clean'] == state]
         if operator and operator != 'All':
             df = df[df['operator'] == operator]
         if status == 'Operational':
             df = df[df['is_operational'] == True]
+        elif status == 'Offline':
+            df = df[df['is_offline'] == True]
+        elif status in ['Planned / Unknown', 'Planned-Unknown', 'Planned']:
+            df = df[df['is_planned_unknown'] == True]
         elif status == 'Non-Operational':
             df = df[df['is_operational'] == False]
 
         total_filtered = len(df)
         
-        # Sample if too large for map performance
+        # Sample if too large for requested limit
         if len(df) > limit:
             sample_df = df.sample(n=limit, random_state=42)
         else:
@@ -185,10 +205,13 @@ class DataService:
                 "title": str(row['title']),
                 "lat": float(row['lat']),
                 "lon": float(row['lon']),
+                "country": str(row.get('country_clean', 'UNKNOWN')),
                 "state": str(row['state_clean']) if pd.notna(row['state_clean']) else "Unknown",
                 "operator": str(row['operator']),
                 "num_connectors": int(row['num_connectors']),
                 "is_operational": bool(row['is_operational']),
+                "is_offline": bool(row.get('is_offline', False)),
+                "is_planned_unknown": bool(row.get('is_planned_unknown', False)),
                 "status": str(row.get('status', 'Operational'))
             })
 
@@ -202,10 +225,34 @@ class DataService:
         df = self.current_df
         states = sorted([str(s) for s in df['state_clean'].dropna().unique() if str(s) != 'nan'])
         operators = sorted([str(op) for op in df['operator'].dropna().unique() if str(op) != 'nan'])
+        
+        COUNTRY_NAMES = {
+            "CA": "Canada", "US": "United States", "ES": "Spain", "RU": "Russia",
+            "MY": "Malaysia", "TR": "Turkey", "DK": "Denmark", "BR": "Brazil",
+            "IT": "Italy", "FR": "France", "DE": "Germany", "GB": "United Kingdom",
+            "NL": "Netherlands", "SE": "Sweden", "NO": "Norway", "AU": "Australia"
+        }
+        countries = []
+        if 'country_clean' in df.columns:
+            cnt_series = df['country_clean'].value_counts()
+            for code, cnt in cnt_series.items():
+                if code in ['UNKNOWN', 'NAN']:
+                    continue
+                name = COUNTRY_NAMES.get(code, code)
+                country_sub = df[df['country_clean'] == code]
+                num_regions = int(country_sub['state_clean'].dropna().nunique())
+                countries.append({
+                    "code": code,
+                    "name": f"{name} ({code})",
+                    "count": int(cnt),
+                    "regions_count": num_regions
+                })
+
         return {
+            "countries": countries,
             "states": states,
             "operators": operators,
-            "statuses": ["All", "Operational", "Non-Operational"]
+            "statuses": ["All", "Operational", "Offline", "Planned / Unknown", "Non-Operational"]
         }
 
 data_service = DataService()

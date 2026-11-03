@@ -76,6 +76,7 @@ export class MapController {
 
         this.stationsLayer = L.layerGroup().addTo(this.map);
         this.radiusLayer = L.layerGroup().addTo(this.map);
+        this.routesLayer = L.layerGroup().addTo(this.map);
         this.hubsLayer = L.layerGroup().addTo(this.map);
     }
 
@@ -91,7 +92,7 @@ export class MapController {
 
         const markers = [];
         stations.forEach(st => {
-            const color = st.is_operational ? '#10B981' : '#EF4444';
+            const color = st.is_operational ? '#10B981' : (st.is_offline ? '#EF4444' : '#F59E0B');
             const marker = L.circleMarker([st.lat, st.lon], {
                 radius: 3.5,
                 fillColor: color,
@@ -107,7 +108,7 @@ export class MapController {
                     <div><strong>State:</strong> ${st.state}</div>
                     <div><strong>Operator:</strong> ${st.operator}</div>
                     <div><strong>Connectors:</strong> ${st.num_connectors}</div>
-                    <div><strong>Status:</strong> <span style="color: ${st.is_operational ? '#10B981' : '#EF4444'}; font-weight: 600;">${st.status}</span></div>
+                    <div><strong>Status:</strong> <span style="color: ${color}; font-weight: 600;">${st.status}</span></div>
                 </div>
             `);
 
@@ -188,4 +189,97 @@ export class MapController {
             this.map.fitBounds(L.latLngBounds(hubPoints), { padding: [60, 60], maxZoom: 7 });
         }
     }
+
+    renderOpt2Dispatch(stationPins = [], depots = [], routes = []) {
+        this.stationsLayer.clearLayers();
+        this.radiusLayer.clearLayers();
+        this.hubsLayer.clearLayers();
+        if (this.routesLayer) this.routesLayer.clearLayers();
+
+        const allCoords = [];
+
+        // 1. Render route vectors from depots to assigned stations
+        routes.forEach(rt => {
+            const polyline = L.polyline([rt.depot_coords, rt.station_coords], {
+                color: '#00F2FE',
+                weight: 2.5,
+                opacity: 0.85,
+                dashArray: '5, 8'
+            });
+
+            polyline.bindPopup(`
+                <div style="font-family: var(--font-body); font-size: 12px; color: #0F172A;">
+                    <div style="font-weight: bold; color: #0284C7; margin-bottom: 2px;">DISPATCH ROUTE</div>
+                    <div><strong>Depot:</strong> ${rt.depot_id}</div>
+                    <div><strong>Distance:</strong> ${rt.distance_km} km</div>
+                </div>
+            `);
+
+            if (this.routesLayer) this.routesLayer.addLayer(polyline);
+            else this.radiusLayer.addLayer(polyline);
+        });
+
+        // 2. Render offline station pins
+        stationPins.forEach(st => {
+            const isRepaired = st.is_repaired;
+            const color = isRepaired ? '#10B981' : '#EF4444';
+            const marker = L.circleMarker([st.lat, st.lon], {
+                radius: isRepaired ? 6 : 4,
+                fillColor: color,
+                color: isRepaired ? '#FFFFFF' : '#EF4444',
+                weight: isRepaired ? 2 : 1,
+                opacity: 0.9,
+                fillOpacity: isRepaired ? 0.9 : 0.5
+            });
+
+            marker.bindPopup(`
+                <div style="font-family: var(--font-body); font-size: 12px; color: #0F172A; min-width: 170px;">
+                    <div style="font-weight: bold; margin-bottom: 4px; color: #0F172A;">${st.title}</div>
+                    <div><strong>Status:</strong> <span style="color: ${isRepaired ? '#10B981' : '#EF4444'}; font-weight: bold;">${isRepaired ? 'DISPATCHED FOR REPAIR' : 'UNASSIGNED / OFFLINE'}</span></div>
+                    <div><strong>State:</strong> ${st.state}</div>
+                    <div><strong>Connectors:</strong> ${st.connectors}</div>
+                    <div><strong>Operator:</strong> ${st.operator}</div>
+                </div>
+            `);
+
+            this.stationsLayer.addLayer(marker);
+            allCoords.push([st.lat, st.lon]);
+        });
+
+        // 3. Render Technician Service Depots
+        depots.forEach(dep => {
+            const depotIcon = L.divIcon({
+                className: 'custom-depot-marker',
+                html: `
+                    <div style="position: relative; width: 30px; height: 30px;">
+                        <div class="hub-pulse-ring" style="border-color: #00F2FE;"></div>
+                        <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #00F2FE, #0284C7); border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px rgba(0,242,254,0.7); font-size: 14px;">🔧</div>
+                    </div>
+                `,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            const marker = L.marker([dep.lat, dep.lon], { icon: depotIcon });
+            marker.bindPopup(`
+                <div style="font-family: var(--font-body); font-size: 13px; color: #0F172A; min-width: 200px;">
+                    <div style="background: linear-gradient(135deg, #00F2FE, #0284C7); color: #080C15; padding: 4px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; margin-bottom: 6px; display: inline-block;">
+                        TECHNICIAN DEPOT #${dep.depot_id}
+                    </div>
+                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px; color: #0F172A;">${dep.title}</div>
+                    <div><strong>Crew Workload:</strong> ${dep.assigned_count} / ${dep.max_capacity} stations (${dep.utilization_pct}%)</div>
+                    <div><strong>Restored Connectors:</strong> <span style="color: #10B981; font-weight: bold;">${dep.connectors_restored}</span></div>
+                    <div><strong>Total Travel:</strong> ${dep.total_distance_km} km</div>
+                </div>
+            `);
+
+            this.hubsLayer.addLayer(marker);
+            allCoords.push([dep.lat, dep.lon]);
+        });
+
+        if (allCoords.length > 0) {
+            this.map.fitBounds(L.latLngBounds(allCoords), { padding: [50, 50], maxZoom: 8 });
+        }
+    }
 }
+

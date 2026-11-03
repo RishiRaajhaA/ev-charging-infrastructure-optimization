@@ -42,14 +42,15 @@ export const Api = {
         return await res.json();
     },
 
-    async solveOpt1(nHubs, radiusKm, nCandidates) {
+    async solveOpt1(nHubs, radiusKm, nCandidates, country = 'All') {
         const res = await fetch(`${API_BASE}/opt1/solve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 n_hubs: parseInt(nHubs),
                 radius_km: parseFloat(radiusKm),
-                n_candidates: parseInt(nCandidates)
+                n_candidates: parseInt(nCandidates),
+                country: country
             })
         });
         if (!res.ok) {
@@ -59,37 +60,57 @@ export const Api = {
         return await res.json();
     },
 
-    async getOpt1KSensitivity(radiusKm, nCandidates) {
+    async getOpt1KSensitivity(radiusKm, nCandidates, country = 'All') {
         const res = await fetch(`${API_BASE}/opt1/sensitivity/k`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 radius_km: parseFloat(radiusKm),
-                n_candidates: parseInt(nCandidates)
+                n_candidates: parseInt(nCandidates),
+                country: country
             })
         });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
     },
 
-    async getOpt1RadiusSensitivity(nHubs, nCandidates) {
+    async getOpt1RadiusSensitivity(nHubs, nCandidates, country = 'All') {
         const res = await fetch(`${API_BASE}/opt1/sensitivity/radius`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 n_hubs: parseInt(nHubs),
-                n_candidates: parseInt(nCandidates)
+                n_candidates: parseInt(nCandidates),
+                country: country
             })
         });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
     },
 
-    async solveOpt2(budget) {
+    async getOpt1CandidateSensitivity(nHubs, radiusKm, country = 'All') {
+        const res = await fetch(`${API_BASE}/opt1/sensitivity/candidates`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                n_hubs: parseInt(nHubs),
+                radius_km: parseFloat(radiusKm),
+                country: country
+            })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return await res.json();
+    },
+
+    async solveOpt2(budget = 500, grouping = 'state', country = 'All') {
         const res = await fetch(`${API_BASE}/opt2/solve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ budget: parseInt(budget) })
+            body: JSON.stringify({
+                budget: parseInt(budget),
+                grouping: grouping,
+                country: country
+            })
         });
         if (!res.ok) {
             const err = await res.json();
@@ -98,8 +119,12 @@ export const Api = {
         return await res.json();
     },
 
-    async getOpt2BudgetSensitivity() {
-        const res = await fetch(`${API_BASE}/opt2/sensitivity`, { method: 'POST' });
+    async getOpt2Sensitivity(grouping = 'state', country = 'All') {
+        const res = await fetch(`${API_BASE}/opt2/sensitivity`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ grouping: grouping, country: country })
+        });
         if (!res.ok) throw new Error(await res.text());
         return await res.json();
     }

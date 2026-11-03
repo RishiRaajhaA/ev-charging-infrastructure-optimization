@@ -19,16 +19,21 @@ if str(WORKSPACE_ROOT) not in sys.path:
 def open_browser(url: str, delay: float = 1.2):
     """Wait for server boot and open the browser."""
     time.sleep(delay)
-    print(f"\n🚀 Launching web application at: {url}")
+    print(f"\nLaunching web application at: {url}")
     webbrowser.open(url)
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     host = "127.0.0.1"
     port = 8000
     url = f"http://{host}:{port}"
 
     print("=" * 70)
-    print("⚡ EV OPTIMA — Full-Stack Decision Support Suite")
+    print("EV OPTIMA - Full-Stack Decision Support Suite")
     print("=" * 70)
     print(f"[*] Starting FastAPI backend engine on {url}")
     print("[*] Launching modern reactive Glassmorphic SPA frontend...")
@@ -37,8 +42,8 @@ def main():
     # Open browser in a separate background thread
     threading.Thread(target=open_browser, args=(url,), daemon=True).start()
 
-    # Run Uvicorn server
-    uvicorn.run("web_app.backend.server:app", host=host, port=port, log_level="info")
+    # Run Uvicorn server with auto-reload
+    uvicorn.run("web_app.backend.server:app", host=host, port=port, log_level="info", reload=True)
 
 if __name__ == "__main__":
     main()

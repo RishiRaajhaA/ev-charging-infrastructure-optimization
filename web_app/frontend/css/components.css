@@ -19,6 +19,12 @@
     gap: 16px;
 }
 
+.grid-5 {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+}
+
 .grid-6 {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -27,11 +33,12 @@
 
 @media (max-width: 1200px) {
     .grid-6 { grid-template-columns: repeat(3, 1fr); }
+    .grid-5 { grid-template-columns: repeat(3, 1fr); }
     .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
-    .grid-6, .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    .grid-6, .grid-5, .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
 }
 
 /* Glass Cards */

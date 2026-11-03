@@ -25,7 +25,8 @@ async def get_filter_options():
 
 @router.get("/stations")
 async def get_stations(
-    limit: int = Query(1000, ge=10, le=10000),
+    limit: int = Query(1000, ge=10, le=50000),
+    country: Optional[str] = None,
     state: Optional[str] = None,
     operator: Optional[str] = None,
     status: Optional[str] = None
@@ -33,6 +34,7 @@ async def get_stations(
     try:
         return data_service.get_stations_sample(
             limit=limit,
+            country=country,
             state=state,
             operator=operator,
             status=status

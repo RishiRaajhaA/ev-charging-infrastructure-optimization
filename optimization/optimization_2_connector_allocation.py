@@ -43,8 +43,15 @@ from scipy.sparse import lil_matrix, csr_matrix
 DATA_PATH = Path(__file__).parent.parent / "data" / "ev_stations_2025.csv"
 
 
-def load_regional_data(data_path=DATA_PATH):
-    """Load the dataset and aggregate stations/connectors by state."""
+def load_regional_data(data_path=DATA_PATH, grouping="state", country=None):
+    """
+    Load the dataset and aggregate stations/connectors by administrative region.
+    
+    Parameters:
+        data_path: CSV file path
+        grouping: 'state' (raw state code, 403 regions) or 'country_state' (country-state composite, 415 regions)
+        country: Optional ISO country code (e.g. 'US', 'CA', 'ES') or None / 'All'
+    """
     df = pd.read_csv(data_path)
 
     required = {"id", "state", "num_connectors"}
@@ -60,8 +67,20 @@ def load_regional_data(data_path=DATA_PATH):
         subset=["state", "num_connectors"]
     ).copy()
 
-    regional_df = (
-        regional_df.groupby("state", as_index=True)
+    if country and country != "All" and "country" in regional_df.columns:
+        regional_df = regional_df[regional_df["country"].astype(str).str.strip().str.upper() == country.strip().upper()]
+
+    if grouping == "country_state" and "country" in regional_df.columns:
+        regional_df["region_key"] = (
+            regional_df["country"].astype(str)
+            + " - "
+            + regional_df["state"].astype(str)
+        )
+    else:
+        regional_df["region_key"] = regional_df["state"].astype(str)
+
+    grouped = (
+        regional_df.groupby("region_key", as_index=True)
         .agg(
             stations=("id", "size"),
             connectors=("num_connectors", "sum"),
@@ -69,11 +88,11 @@ def load_regional_data(data_path=DATA_PATH):
         .sort_index()
     )
 
-    regional_df["current_cps"] = (
-        regional_df["connectors"] / regional_df["stations"]
+    grouped["current_cps"] = (
+        grouped["connectors"] / grouped["stations"]
     )
 
-    return df, regional_df
+    return df, grouped
 
 
 def solve_connector_allocation(regional_df, budget):
@@ -265,55 +284,49 @@ def validate_budget_sensitivity(regional_df, budgets):
 
 
 if __name__ == "__main__":
-    df, regional_df = load_regional_data()
+    df, regional_df = load_regional_data(grouping="state")
 
-    print("=== Optimization 2: Regional Connector Allocation ===")
+    print("=== Optimization 2: Regional Connector Allocation (Max-Min Fairness MILP) ===")
     print(f"Total dataset records: {len(df):,}")
     print(f"Records with valid state: {df['state'].notna().sum():,}")
     print(f"Missing state records: {df['state'].isna().sum():,}")
-    print(f"Regions included: {len(regional_df):,}")
-    print(
-        f"Existing connectors in modeled regions: "
-        f"{regional_df['connectors'].sum():,.0f}"
-    )
-    print(
-        f"Existing stations in modeled regions: "
-        f"{regional_df['stations'].sum():,.0f}"
-    )
+    print(f"Regions included (Raw State): {len(regional_df):,}")
+    print(f"Existing connectors in modeled regions: {regional_df['connectors'].sum():,.0f}")
+    print(f"Existing stations in modeled regions: {regional_df['stations'].sum():,.0f}")
+    
+    initial_min_cps = regional_df["current_cps"].min()
+    print(f"Initial Network Minimum CPS: {initial_min_cps:.6f} (5 stations have 0 connectors)")
 
     budget = 500
     result = solve_connector_allocation(regional_df, budget)
     checks, independent_min_cps = validate_solution(result)
+    
+    alloc_df = result["allocation"]
+    funded_count = (alloc_df["additional_connectors"] > 0).sum()
+    delta_cps = independent_min_cps - initial_min_cps
 
-    print(f"\nBudget: {budget}")
-    print(
-        f"Optimized minimum connectors/station: "
-        f"{independent_min_cps:.6f}"
-    )
+    print(f"\nBudget (B): {budget} connectors")
+    print(f"Optimized minimum connectors/station (t*): {independent_min_cps:.6f}")
+    print(f"Absolute Minimum CPS Gain: +{delta_cps:.6f} connectors/station")
+    print(f"Under-equipped regions funded: {funded_count} of {len(regional_df)} ({funded_count / len(regional_df):.1%})")
 
-    print("\nValidation:")
+    print("\nValidation Checks:")
     for name, passed in checks.items():
         print(f"  {name}: {'PASS' if passed else 'FAIL'}")
 
-    print("\nTop allocations:")
+    print("\nTop 15 Allocated Regions:")
     print(
-        result["allocation"]
-        .sort_values("additional_connectors", ascending=False)
-        .head(20)
-        .to_string()
+        alloc_df.sort_values("additional_connectors", ascending=False)[
+            ["stations", "connectors", "current_cps", "additional_connectors", "final_connectors", "final_cps"]
+        ].head(15).to_string()
     )
 
     baseline = proportional_baseline(regional_df, budget)
 
-    print("\nBaseline comparison:")
-    print(
-        f"  Proportional baseline minimum CPS: "
-        f"{baseline['final_cps'].min():.6f}"
-    )
-    print(
-        f"  Optimized minimum CPS: "
-        f"{independent_min_cps:.6f}"
-    )
+    print("\nBaseline Comparison:")
+    print(f"  Proportional Baseline Min CPS: {baseline['final_cps'].min():.6f}")
+    print(f"  Max-Min Optimized Min CPS:     {independent_min_cps:.6f}")
+    print(f"  Advantage over Proportional:   +{independent_min_cps - baseline['final_cps'].min():.6f} CPS")
 
     sensitivity, monotonic = validate_budget_sensitivity(
         regional_df,

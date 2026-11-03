@@ -9,8 +9,13 @@ import os
 
 # Import Optimization 1
 from optimization.optimization_1_hub_location import generate_candidate_hubs, solve_max_coverage, haversine_matrix
-# Import Optimization 2
-from optimization.optimization_2_connector_allocation import load_regional_data, solve_connector_allocation, proportional_baseline
+# Import Optimization 2 (Regional Infrastructure Parity - Max-Min Fairness MILP)
+from optimization.optimization_2_connector_allocation import (
+    load_regional_data,
+    solve_connector_allocation,
+    proportional_baseline,
+    validate_solution
+)
 
 # Configuration
 st.set_page_config(page_title="EV Charging Optimization", layout="wide", page_icon="⚡")
@@ -44,9 +49,9 @@ def preprocess_data(df):
     if 'id' not in df.columns:
         df['id'] = range(len(df))
     df['num_connectors'] = pd.to_numeric(df['num_connectors'], errors='coerce')
-    op_statuses = ['Operational', 'Active', 'Available', 'Online', 'operational']
     if 'status' in df.columns:
-        df['is_operational'] = df['status'].astype(str).str.contains('|'.join(op_statuses), case=False, na=False)
+        status_clean = df['status'].astype(str).str.strip().str.lower()
+        df['is_operational'] = status_clean == 'operational'
     else:
         df['is_operational'] = True
     return df
@@ -267,13 +272,14 @@ elif selection == "Optimization Center":
     st.markdown('<p class="sub-header">Select a mathematical model to solve.</p>', unsafe_allow_html=True)
     
     opt_choice = st.radio("Choose the problem you want to solve:", 
-                          ["Charging Hub Location (Maximum Coverage MIP)", 
-                           "Connector Allocation (Max-Min Fairness MILP)"])
+                          ["Charging Hub Location (Maximum Coverage MIP - MCLP)", 
+                           "Regional Infrastructure Parity (Max-Min Fairness MILP)"])
     
     st.markdown("---")
     
     if opt_choice.startswith("Charging Hub Location"):
-        st.subheader("Opt 1 Parameters")
+        st.subheader("Opt 1 Parameters: Strategic Charging Hub Location")
+        st.info("Upgrading operational charging stations into high-throughput super-hubs using 3D Spherical K-Means candidates and Maximum Covering Location Problem (MCLP).")
         col1, col2, col3 = st.columns(3)
         with col1:
             k_hubs = st.number_input("Number of Hubs (K)", min_value=1, max_value=100, value=10, step=1)
@@ -283,24 +289,23 @@ elif selection == "Optimization Center":
             n_candidates = st.number_input("Candidate Locations", min_value=10, max_value=500, value=100, step=10)
         
         if st.button("🚀 Run Optimization 1", type="primary"):
-            with st.spinner("Generating candidates and solving Mixed-Integer Program..."):
+            with st.spinner("Generating candidates and solving Maximum Coverage MIP..."):
                 try:
-                    candidates = generate_candidate_hubs(df, n_candidates=n_candidates, random_state=42)
-                    res = solve_max_coverage(df, candidates, n_hubs=k_hubs, radius_km=radius_km)
+                    op_df = df[df['status'].astype(str).str.strip().str.lower() == 'operational'].copy() if 'status' in df.columns else df
+                    candidates = generate_candidate_hubs(op_df, n_candidates=n_candidates, random_state=42, operational_only=True)
+                    res = solve_max_coverage(op_df, candidates, n_hubs=k_hubs, radius_km=radius_km, operational_only=True)
                     
                     st.success("Optimization completed successfully!")
-                    
-                    total_stations = len(df.dropna(subset=['lat', 'lon']))
                     
                     st.markdown("### Coverage Results")
                     col_a, col_b, col_c, col_d = st.columns(4)
                     col_a.metric("Selected Hubs", res['n_hubs'])
                     col_b.metric("Coverage Radius", f"{res['radius_km']} km")
-                    col_c.metric("Covered Stations", f"{res['covered_stations']:,}")
-                    col_d.metric("Coverage Percentage", f"{res['coverage_rate']:.2%}")
+                    col_c.metric("Covered Stations", f"{res['covered_stations']:,} / {res['total_stations']:,}")
+                    col_d.metric("Coverage Rate", f"{res['coverage_rate']:.2%}")
                     
                     st.markdown("### Baseline Comparison (100 Random Trials)")
-                    baseline = run_opt1_baseline(df, candidates, k_hubs, radius_km, num_trials=100)
+                    baseline = run_opt1_baseline(op_df, candidates, k_hubs, radius_km, num_trials=100)
                     
                     b_col1, b_col2, b_col3, b_col4 = st.columns(4)
                     b_col1.metric("Random Mean Coverage", f"{baseline['mean_coverage']:.1f}")
@@ -311,19 +316,19 @@ elif selection == "Optimization Center":
                     b_col4.metric("Optimized Improvement", f"+{improvement:.1f} stations")
                     
                     st.markdown("### Coverage Map")
-                    valid_df = df.dropna(subset=['lat', 'lon'])
+                    valid_df = op_df.dropna(subset=['lat', 'lon'])
                     
                     fig = go.Figure()
                     fig.add_trace(go.Scattermapbox(
                         lat=valid_df['lat'], lon=valid_df['lon'], mode='markers',
                         marker=go.scattermapbox.Marker(size=4, color='gray', opacity=0.3),
-                        name='Existing Stations', hoverinfo='none'
+                        name='Operational Stations', hoverinfo='none'
                     ))
                     
                     fig.add_trace(go.Scattermapbox(
                         lat=res['selected_hubs']['lat'], lon=res['selected_hubs']['lon'], mode='markers',
-                        marker=go.scattermapbox.Marker(size=12, color='red', symbol='circle'),
-                        name='Selected Hubs', text=res['selected_hubs']['title'] if 'title' in res['selected_hubs'].columns else None
+                        marker=go.scattermapbox.Marker(size=12, color='#FF007A', symbol='circle'),
+                        name='Selected Super-Hubs', text=res['selected_hubs']['title'] if 'title' in res['selected_hubs'].columns else None
                     ))
                     
                     fig.update_layout(
@@ -339,80 +344,120 @@ elif selection == "Optimization Center":
                     st.error(f"Optimization failed: {str(e)}")
 
     else:
-        st.subheader("Opt 2 Parameters")
-        st.warning("⚠️ Records with a missing `state` or region value are excluded from this regional optimization.")
+        st.subheader("Opt 2 Parameters: Regional Infrastructure Parity")
+        st.info("Allocating additional charging connectors ($B$) across administrative regions using Max-Min Fairness MILP to maximize the minimum connectors-per-station ratio.")
         
-        budget_options = [100, 250, 500, 750, 1000, "Custom"]
-        budget_sel = st.selectbox("Connector Budget", budget_options, index=2)
-        
-        if budget_sel == "Custom":
-            budget = st.number_input("Custom Budget", min_value=1, max_value=10000, value=500, step=50)
-        else:
-            budget = int(budget_sel)
-            
-        if st.button("🚀 Run Optimization 2", type="primary"):
-            with st.spinner("Solving Regional Allocation MILP..."):
+        col1, col2 = st.columns(2)
+        with col1:
+            grouping_choice = st.selectbox(
+                "Regional Aggregation Scheme",
+                ["Administrative State (403 regions)", "Country-State Composite (415 regions)"]
+            )
+            grouping_key = "state" if "403" in grouping_choice else "country_state"
+        with col2:
+            budget_val = st.slider("Additional Connector Budget (B)", min_value=50, max_value=2000, value=500, step=25)
+
+        if st.button("🚀 Run Equity Optimization (MILP)", type="primary"):
+            with st.spinner("Solving Max-Min Fairness MILP..."):
                 try:
-                    base_df, regional_df = get_regional_data(df)
-                    res = solve_connector_allocation(regional_df, budget)
+                    state_col = "state" if "state" in df.columns else "state_clean"
+                    reg_raw = df.dropna(subset=[state_col, "num_connectors"]).copy()
+                    reg_raw["num_connectors"] = pd.to_numeric(reg_raw["num_connectors"], errors="coerce")
+                    reg_raw = reg_raw.dropna(subset=["num_connectors"])
                     
-                    alloc_df = res['allocation']
-                    initial_min_cps = alloc_df['current_cps'].min()
-                    final_min_cps = res['minimum_cps']
-                    improvement = final_min_cps - initial_min_cps
-                    
-                    st.success("Optimization completed successfully!")
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Budget Utilized", f"{int(alloc_df['additional_connectors'].sum()):,}")
-                    col2.metric("Initial Min CPS", f"{initial_min_cps:.4f}")
-                    col3.metric("Optimized Min CPS", f"{final_min_cps:.4f}", delta=f"+{improvement:.4f}")
-                    
-                    baseline = proportional_baseline(regional_df, budget)
-                    col4.metric("Baseline Min CPS", f"{baseline['final_cps'].min():.4f}")
-                    
-                    top_alloc = alloc_df[alloc_df['additional_connectors'] > 0].sort_values('additional_connectors', ascending=False)
-                    
-                    st.markdown("### Before vs After: Regional Connectors per Station")
-                    compare_df = top_alloc.reset_index()[['state', 'current_cps', 'final_cps']].melt(id_vars='state', var_name='Metric', value_name='CPS')
-                    fig2 = px.bar(compare_df, x='state', y='CPS', color='Metric', barmode='group', title="CPS Improvement in Targeted States / Regions")
-                    st.plotly_chart(fig2, use_container_width=True)
-                    
-                    st.markdown("### Top Allocations by States / Regions")
-                    st.dataframe(top_alloc[['stations', 'connectors', 'current_cps', 'additional_connectors', 'final_connectors', 'final_cps']], use_container_width=True)
-                    
+                    if grouping_key == "country_state" and "country" in reg_raw.columns:
+                        reg_raw["region_key"] = reg_raw["country"].fillna("Unknown").astype(str).str.strip() + " - " + reg_raw[state_col].astype(str).str.strip()
+                    else:
+                        reg_raw["region_key"] = reg_raw[state_col].astype(str).str.strip()
+
+                    regional_df = reg_raw.groupby("region_key", as_index=True).agg(
+                        stations=("id", "size"),
+                        connectors=("num_connectors", "sum")
+                    ).sort_index()
+                    regional_df["current_cps"] = regional_df["connectors"] / regional_df["stations"]
+
+                    res = solve_connector_allocation(regional_df, budget=budget_val)
+                    checks, min_cps = validate_solution(res)
+                    base = proportional_baseline(regional_df, budget_val)
+
+                    alloc_df = res["allocation"]
+                    funded_regions = (alloc_df["additional_connectors"] > 0).sum()
+                    initial_min = float(regional_df["current_cps"].min())
+                    delta_cps = min_cps - initial_min
+                    prop_min = float(base["final_cps"].min())
+
+                    st.success(f"Max-Min fairness optimization solved to global optimality!")
+
+                    col_a, col_b, col_c, col_d = st.columns(4)
+                    col_a.metric("Guaranteed Min CPS Floor (t*)", f"{min_cps:.4f}", delta=f"+{delta_cps:.4f} gain")
+                    col_b.metric("Initial Baseline Floor", f"{initial_min:.4f}", help="5 stations in dataset have 0 connectors")
+                    col_c.metric("Funded Regions", f"{funded_regions} / {len(regional_df)}", f"{funded_regions / len(regional_df):.1%}")
+                    col_d.metric("Gain vs. Proportional", f"+{min_cps - prop_min:.4f} CPS", help=f"Proportional baseline min CPS remains at {prop_min:.4f}")
+
+                    st.markdown("### Top Targeted Regions Allocation Impact")
+                    top_funded = alloc_df.sort_values("additional_connectors", ascending=False).head(15).reset_index()
+                    top_funded["proportional_alloc"] = [int(base.loc[k, "additional_connectors"]) for k in top_funded["region_key"]]
+                    top_funded["proportional_cps"] = [float(base.loc[k, "final_cps"]) for k in top_funded["region_key"]]
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(
+                        x=top_funded["region_key"], y=top_funded["current_cps"],
+                        name="Initial CPS", marker_color="#EF4444"
+                    ))
+                    fig.add_trace(go.Bar(
+                        x=top_funded["region_key"], y=top_funded["proportional_cps"],
+                        name="Proportional Benchmark CPS", marker_color="#64748B"
+                    ))
+                    fig.add_trace(go.Bar(
+                        x=top_funded["region_key"], y=top_funded["final_cps"],
+                        name="Max-Min Optimized CPS", marker_color="#10B981"
+                    ))
+                    fig.update_layout(barmode="group", height=450, title="Connectors-Per-Station (CPS) Comparison for Top Allocated Regions")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    st.markdown("### Detailed Regional Allocation Table")
+                    display_table = alloc_df[alloc_df["additional_connectors"] > 0].sort_values("additional_connectors", ascending=False)
+                    st.dataframe(display_table, use_container_width=True)
+
                 except Exception as e:
-                    st.error(f"Optimization failed: {str(e)}")
+                    st.error(f"Connector allocation failed: {str(e)}")
 
 elif selection == "Methodology":
-    st.markdown('<p class="main-header">Methodology</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">Methodology & Course Alignment</p>', unsafe_allow_html=True)
     
     st.markdown(r"""
-    ### Optimization 1: Charging Hub Location Selection
-    This model addresses the **Maximum Coverage Problem** to strategically place new, high-capacity charging hubs.
+    ### Optimization 1: Strategic Charging Hub Location (Maximum Covering Location Problem - MCLP)
+    This model addresses the **Commercial Efficiency & Spatial Coverage** decision: selecting $K$ existing charging stations to upgrade into regional high-throughput super-hubs.
     
     - **Optimization Technique**: Mixed-Integer Programming (MIP)
     - **Decision Variables**: 
-      - $y_j \in \{0, 1\}$: 1 if candidate hub location $j$ is selected to build a hub, 0 otherwise.
-      - $z_i \in \{0, 1\}$: 1 if existing station $i$ is covered by at least one selected hub, 0 otherwise.
-    - **Objective**: Maximize the total number of covered stations ($\sum z_i$).
+      - $y_j \in \{0, 1\}$: 1 if candidate hub location $j$ is selected, 0 otherwise.
+      - $z_i \in [0, 1]$: Continuous coverage indicator of station $i$ (naturally binary in optimal solution).
+    - **Objective**: Maximize total covered operational stations: 
+      $$\max \sum_{i=1}^N z_i$$
     - **Constraints**: 
-      - Budget constraint: The total number of selected hubs cannot exceed $K$ ($\sum y_j \le K$).
-      - Coverage constraint: A station $i$ can only be considered covered ($z_i = 1$) if at least one selected hub $j$ is within the defined `radius_km`.
-    - **Concept**: By running a spherical K-Means clustering algorithm on existing stations, we dynamically generate a subset of realistic candidate locations. The MIP solver then rigorously selects the best $K$ locations to maximize geographic coverage.
+      - Hub budget: $\sum_{j=1}^M y_j \le K$.
+      - Coverage reach: $z_i \le \sum_{j \in N_i} y_j \quad \forall i$.
+      - Variable domains: $y_j \in \{0, 1\}, \quad 0 \le z_i \le 1$.
+    - **Dataset Grounding**: Evaluated on $N = 9,301$ operational stations. Using $M = 100$ spherical K-Means candidate locations, $K = 10$ selected hubs, and $R = 50\text{ km}$ reach, exactly **3,095 stations (33.28%)** are covered.
     
     ---
     
-    ### Optimization 2: Regional Connector Allocation
-    This model addresses the **Max-Min Fairness Problem** to distribute a budget of new connectors across administrative regions.
+    ### Optimization 2: Regional Infrastructure Connector Allocation (Max-Min Fairness MILP)
+    This model addresses the **Social Equity & Hardware Parity** decision: allocating a capital expansion budget of $B$ additional charging plugs across administrative regions to lift underserved areas.
     
     - **Optimization Technique**: Mixed-Integer Linear Programming (MILP)
     - **Decision Variables**: 
-      - $x_i \in \mathbb{Z}^+$: Integer number of additional connectors allocated to region $i$.
-      - $t \in \mathbb{R}^+$: The minimum post-allocation connectors-per-station ratio across all regions.
-    - **Objective**: Maximize $t$ (raise the lowest denominator of regional infrastructure).
+      - $x_i \in \mathbb{Z}_{\ge 0}$: Integer number of additional connectors allocated to region $i$.
+      - $t \ge 0$: Continuous auxiliary variable representing the guaranteed minimum post-allocation Connectors-Per-Station (CPS) ratio.
+    - **Objective**: Maximize the minimum regional ratio:
+      $$\max t$$
     - **Constraints**: 
-      - Fairness constraint: For every region $i$, the final connectors per station must be at least $t$. Mathematically: $C_i + x_i \ge t \times S_i$, where $C_i$ is existing connectors and $S_i$ is existing stations.
-      - Budget constraint: The sum of all allocated connectors must exactly equal the budget $B$ ($\sum x_i = B$).
-    - **Concept**: Rather than allocating connectors strictly proportionally (which ignores existing imbalances), this formulation mathematically guarantees that the most underserved regions receive infrastructure first, maximizing the floor of the network's equity.
+      - Regional fairness floor: $C_i + x_i \ge t \cdot S_i \quad \forall \text{ region } i$.
+      - Exact connector budget: $\sum_{i=1}^P x_i = B$.
+      - Variable domains: $x_i \in \mathbb{Z}_{\ge 0}, \quad t \ge 0$.
+    - **Dataset Grounding**: Over 70% of stations have only 1 connector plug and 5 stations report 0 connectors, yielding an initial regional floor of **0.0000 CPS**. Under budget $B = 500$:
+      - *Administrative State (403 regions)*: Guaranteed floor rises to **1.2127 CPS** ($\Delta t = +1.2127$), funding 247 regions.
+      - *Country-State (415 regions)*: Guaranteed floor rises to **1.2058 CPS** ($\Delta t = +1.2058$), funding 255 regions.
+      - *Proportional Benchmark*: Leaves the minimum CPS at **0.0000**, demonstrating the mathematical necessity of the Max-Min formulation.
     """)

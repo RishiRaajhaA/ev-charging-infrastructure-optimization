@@ -18,8 +18,8 @@
 3. [Dual Interactive User Interfaces](#-dual-interactive-user-interfaces)
 4. [Visual Showcase](#-visual-showcase)
 5. [Mathematical Formulations](#-mathematical-formulations)
-   - [Optimization 1: Spherical K-Means & Maximum Coverage MIP](#optimization-1--charging-hub-location-selection)
-   - [Optimization 2: Max-Min Regional Fairness MILP](#optimization-2--regional-connector-allocation)
+   - [Optimization 1: Spherical K-Means & Maximum Coverage MIP](#optimization-1--strategic-charging-hub-location-maximum-coverage-mip)
+   - [Optimization 2: Tactical Technician Repair Dispatch MILP](#optimization-2--tactical-technician-repair-dispatch-constrained-assignment-milp)
 6. [Exploratory Data Analysis (EDA)](#-exploratory-data-analysis-eda)
 7. [Validation & Sensitivity Suite](#-validation--sensitivity-suite)
 8. [Repository Architecture](#-repository-architecture)
@@ -32,8 +32,8 @@
 ## 🚀 Executive Summary
 
 As Electric Vehicle (EV) adoption accelerates globally, charging infrastructure networks face two critical structural challenges:
-1. **Geographic Coverage Inefficiency**: Existing stations are clustered, leaving coverage gaps in strategic corridors.
-2. **Regional Resource Disparity**: Certain administrative regions suffer from severely depressed **Connectors-Per-Station (CPS)** ratios, causing localized congestion and charging bottlenecks.
+1. **Commercial Efficiency & Spatial Reach (Model 1)**: Existing operational stations are clustered; selecting $K$ optimal stations to upgrade into high-throughput super-hubs maximizes regional geographical catchment.
+2. **Social Equity & Hardware Parity (Model 2)**: Over 70% of stations possess only 1 plug and 5 stations report 0 plugs, yielding an initial regional floor of **0.0000 Connectors per Station (CPS)**; allocating a capital connector expansion budget ($B$) via Max-Min Fairness guarantees underserved corridors receive hardware parity.
 
 This project delivers an end-to-end **Operations Research Decision Support System** that addresses these challenges through rigorous mathematical programming, full-stack visualization, and interactive scenario simulation.
 
@@ -44,13 +44,13 @@ This project delivers an end-to-end **Operations Research Decision Support Syste
 | Metric / Dimension | Value | Operational Significance |
 |---|---|---|
 | **Observed Charging Stations** | `10,000` | Global sample from OpenChargeMap API (Nov 2025) |
+| **Operational Stations** | `9,301` | Evaluated denominator for Model 1 Hub Selection |
 | **Physical Connectors** | `14,565` | Network-wide physical charging capacity |
-| **Operational Rate** | `96.18%` | High network uptime baseline |
-| **Network CPS Average** | `~1.46` | Connectors per station ratio across regions |
-| **Structural Concentration** | `25.27%` | Top 10% of stations hold over a quarter of all connectors |
-| **Top 3 Regions (QC, BC, WA)** | `34.34%` | Over one-third of observed connectors concentrated in 3 regions |
-| **Opt 1 Benchmark ($K=10, R=50\text{ km}$)** | `3,278 stations` (`32.78%`) | Outperforms 100-trial Monte Carlo random baseline by **+38.5%** |
-| **Opt 2 Benchmark ($B=500\text{ connectors}$)** | `1.212670 CPS floor` | Elevates the lowest regional CPS floor across all 84 jurisdictions |
+| **Structural Connector Scarcity** | `70.4%` | Stations with only 1 connector plug (5 stations with 0 plugs) |
+| **Opt 1 Coverage ($K=10, R=50\text{ km}$)** | `3,095 stations` (`33.28%`) | Out of 9,301 operational stations (outperforms random baseline) |
+| **Opt 2 Baseline Regional Floor** | `0.0000 CPS` | Minimum ratio across administrative regions (403 state / 415 country-state) |
+| **Opt 2 Max-Min Floor ($B=500$)** | `1.2127 CPS` | Absolute gain $\Delta t = +1.2127\text{ CPS}$, funding 247 under-equipped regions |
+| **Opt 2 Proportional Deficit** | `0.0000 CPS` | Proportional allocation fails to lift zero-connector regions |
 
 ---
 
@@ -113,13 +113,13 @@ The repository provides **two distinct interfaces** tailored for both executive 
 
 ## 📐 Mathematical Formulations
 
-### Optimization 1 — Charging Hub Location Selection
+### Optimization 1 — Maximum Existing-Station Coverage Hub Selection
 
 #### Problem Definition
-Given $N$ existing EV charging stations, select $K$ candidate hubs such that the total number of geographically covered stations within radius $R$ is maximized.
+Given $N = 10,000$ existing EV charging stations, select $K$ candidate sites from existing operational stations to upgrade into fast-charging hubs such that the total number of geographically covered existing stations within radius $R$ is maximized. This optimizes existing-station network coverage (not population access or unobserved charging demand).
 
-#### Candidate Hub Generation (Spherical K-Means)
-To ensure proposed hubs reside at realistic, observed geographic locations, the dataset coordinates are clustered using Spherical K-Means ($M = 30$ clusters). Each cluster centroid is mapped to the nearest real charging station coordinate $j \in \{1, \dots, M\}$.
+#### Candidate Site Generation (Spherical K-Means)
+To ensure proposed hubs reside at realistic, observed geographic locations, the dataset coordinates are clustered using Spherical K-Means ($M = 100$ candidate clusters). Each cluster centroid is mapped to the nearest real operational charging station coordinate $j \in \{1, \dots, M\}$. The solver determines the exact global optimum restricted to this candidate set.
 
 #### Pairwise Great-Circle Distance
 Distances between all stations $i$ and candidate hubs $j$ are calculated via the Haversine formula:
@@ -149,17 +149,19 @@ $$
 \begin{aligned}
 z_i &\le \sum_{j=1}^{M} A_{ij} y_j && \forall i \in \{1, \dots, N\} \quad \text{(Coverage Adjacency)} \\
 \sum_{j=1}^{M} y_j &\le K && \text{(Hub Budget Limit)} \\
-y_j &\in \{0, 1\} && \forall j \in \{1, \dots, M\} \quad \text{(Hub Selection)} \\
-z_i &\in [0, 1] && \forall i \in \{1, \dots, N\} \quad \text{(Station Covered)}
+y_j &\in \{0, 1\} && \forall j \in \{1, \dots, M\} \quad \text{(Hub Upgrade Binary Decision)} \\
+z_i &\in [0, 1] && \forall i \in \{1, \dots, N\} \quad \text{(Station Covered Indicator)}
 \end{aligned}
 $$
 
 ---
 
-### Optimization 2 — Regional Connector Allocation
+### Optimization 2 — Regional Infrastructure Connector Allocation (Max-Min Fairness MILP)
 
 #### Problem Definition
-Given $R$ administrative regions with existing stations $S_i$ and existing connectors $C_i$, distribute a budget of $B$ additional connectors to maximize the minimum post-allocation **Connectors-Per-Station (CPS)** ratio across all regions (Max-Min Fairness).
+Analysis of the 10,000 station network reveals severe hardware scarcity: over **70% of stations possess only 1 connector plug**, and **5 stations report 0 operational connectors**, resulting in an initial network minimum of **0.0000 Connectors per Station (CPS)**. Expanding connectors strictly proportional to existing station counts fails because it directs the bulk of capital to already well-equipped urban centers while leaving sparse, single-plug rural and suburban corridors perpetually underserved.
+
+The **Regional Connector Allocation Problem** is formulated as a *Mixed-Integer Linear Program (MILP)* using the **Max-Min Fairness (Bottleneck)** objective. Given a fixed capital expansion budget of $B$ additional connectors, the optimization maximizes the lowest regional connectors-per-station ratio across all modeled administrative regions.
 
 #### MILP Formulation
 
@@ -171,26 +173,26 @@ $$
 
 $$
 \begin{aligned}
-C_i + x_i &\ge t \cdot S_i && \forall i \in \{1, \dots, R\} \quad \text{(Regional CPS Floor)} \\
-\sum_{i=1}^{R} x_i &= B && \text{(Total Connector Budget)} \\
-x_i &\in \mathbb{Z}_{\ge 0} && \forall i \in \{1, \dots, R\} \quad \text{(Integer Additions)} \\
-t &\ge 0 && \text{(Minimum Target Ratio)}
+C_i + x_i &\ge t \cdot S_i && \forall i \in \{1, \dots, P\} \quad \text{(Regional Parity Floor Constraint)} \\
+\sum_{i=1}^{P} x_i &= B && \text{(Connector Budget Constraint)} \\
+x_i &\ge 0, \quad x_i \in \mathbb{Z} && \forall i \in \{1, \dots, P\} \quad \text{(Integer Additional Plugs)} \\
+t &\ge 0 && \text{(Continuous Minimum Ratio Variable)}
 \end{aligned}
 $$
 
-#### Budget vs. Minimum CPS Response:
-```
-Minimum CPS Floor (t)
-   ▲
-1.35│                                        ● (1000, 1.312)
-1.30│                              ● (750, 1.263)
-1.25│                    ● (500, 1.213)
-1.20│
-1.15│          ● (250, 1.143)
-1.00│    ● (100, 1.000)
- 0.0└───┬────────┬────────┬────────┬────────┬───────► Connector Budget (B)
-       100      250      500      750     1000
-```
+Where:
+- $P$: Number of modeled regions ($403$ for raw administrative state; $415$ for country-state composite).
+- $S_i$: Total observed charging stations in region $i$.
+- $C_i$: Total existing physical connectors in region $i$.
+- $x_i$: Integer number of additional connectors allocated to region $i$.
+- $t$: Auxiliary continuous variable representing the guaranteed post-allocation minimum connectors-per-station floor.
+- $B$: Total available connector expansion budget (default $B = 500$).
+
+#### Verified Results ($B = 500$)
+- **Initial Baseline**: $\min_i \left(\frac{C_i}{S_i}\right) = 0.0000\text{ CPS}$ (due to 5 stations with zero connectors).
+- **Administrative State ($403$ regions)**: Optimal floor $t^* = \mathbf{1.2127\text{ CPS}}$ ($\Delta t = +1.2127$), funding **247 under-equipped regions**.
+- **Country-State ($415$ regions)**: Optimal floor $t^* = \mathbf{1.2058\text{ CPS}}$ ($\Delta t = +1.2058$), funding **255 under-equipped regions**.
+- **Proportional Baseline Comparison**: Allocating 500 connectors proportional to station count leaves the minimum CPS trapped at **0.0000**, quantitatively proving the superiority of the Max-Min formulation for regional equity.
 
 ---
 
@@ -205,7 +207,10 @@ The project includes an in-depth exploratory analysis in [`eda/EDA.ipynb`](eda/E
 
 - **Network Skewness**: Over 70% of stations possess only 1 or 2 connectors; high-density charging hubs (>10 connectors) are rare outliers.
 - **Geographic Clustering**: Distinct corridors exist along the Pacific Northwest and Eastern Canada.
-- **Data Hygiene**: 2,869 records without administrative state IDs are isolated to ensure strict data fidelity in regional modeling.
+- **Clean Operational Segmentation**:
+  - `9,301` Operational stations utilized in Model 1 (Growth / MCLP).
+  - `312` Offline/Broken stations (176 Temporarily Unavailable + 136 Not Operational) knocked out, targeted in Model 2 (Recovery / Dispatch).
+  - `387` Planned/Unknown records cleanly accounted for and isolated.
 
 ---
 
@@ -215,11 +220,13 @@ Independent verification scripts validate the solver outputs against theoretical
 
 ### 1. Model 1 Validation (`optimization/validation/validation_optimization_1.py`)
 - **Monotonicity**: Proven that coverage monotonically increases with both $K$ and $R$.
-- **Monte Carlo Comparison**: The MIP model achieves **3,278 covered stations** ($K=10, R=50\text{ km}$) compared to the randomized baseline mean of **2,367 stations** ($p < 0.001$).
+- **Random Baseline Comparison**: The MIP model achieves **3,278 covered stations** ($K=10, R=50\text{ km}, M=100$) out of $10,000$ ($32.78\%$), lying $6.17$ standard deviations above the 100-trial random baseline mean of **474.7 stations** (range $[39, 1996]$, $Z = 6.17$).
 
 ### 2. Model 2 Validation (`optimization/validation/validation_optimization_2.py`)
-- **Proportional vs Max-Min Allocation**: Proportional allocation concentrates connectors in already high-capacity regions, leaving the CPS floor at $1.000$. Max-Min successfully raises the floor to $1.213$ ($B=500$).
-- **Exact Conservation**: $\sum x_i = B$ verified with zero budget leakage.
+- **Constraint Satisfaction**: 100% of capacity and SLA distance constraints verified across all depots and stations.
+- **Zero-Tolerance Bounds**: When $D_{\max} = 0$, exactly 0 stations assigned; when capacity $K_i = 0$, exactly 0 stations assigned.
+- **Monotonic SLA Scaling**: Proved that increasing $D_{\max}$ from $25\text{ km}$ to $500\text{ km}$ monotonically expands connector recovery from 0 to 12 in the US fleet benchmark.
+- **Exact Integrality**: $x_{ij}, z_j \in \{0, 1\}$ strictly verified with zero non-binary leakage.
 
 ---
 
@@ -254,11 +261,12 @@ Operations Research/
 │   └── EDA_Process.md                       # Structured EDA Documentation & Findings
 │
 ├── optimization/
-│   ├── optimization_1_hub_location.py       # Spherical K-Means + MIP Hub Location Solver
-│   ├── optimization_2_connector_allocation.py# Max-Min Regional Fairness MILP Solver
+│   ├── optimization_1_hub_location.py       # Spherical K-Means + MIP Hub Location Solver (Growth)
+│   ├── optimization_2_technician_dispatch.py # Constrained MILP Technician Repair Dispatch Solver (Recovery)
+│   ├── optimization_2_connector_allocation.py# Max-Min Regional Fairness Solver (Legacy Baseline)
 │   └── validation/
-│       ├── validation_optimization_1.py     # Independent Monte Carlo & Sensitivity Test
-│       ├── validation_optimization_2.py     # Budget Sensitivity & Baseline Comparison Test
+│       ├── validation_optimization_1.py     # Opt 1 Validation Suite & Baseline Benchmarking
+│       ├── validation_optimization_2.py     # Opt 2 Validation Suite (100% Constraints Passed)
 │       ├── optimization_1_validation_results.md
 │       └── optimization_2_validation_results.md
 │

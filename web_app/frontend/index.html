@@ -140,8 +140,8 @@
                                 <span class="kpi-label">Operational Ratio</span>
                                 <div class="kpi-icon green">✅</div>
                             </div>
-                            <div id="kpi-op-ratio" class="kpi-value">0.0%</div>
-                            <div class="kpi-sub">Active & Functional</div>
+                            <div id="kpi-op-ratio" class="kpi-value">93.0%</div>
+                            <div class="kpi-sub">9,301 of 10,000 Active</div>
                         </div>
                         <div class="kpi-card">
                             <div class="kpi-top">
@@ -184,7 +184,7 @@
                                     <span class="icon">🍩</span>
                                     <div>
                                         <h3 class="card-title">Operational Health Classification</h3>
-                                        <p class="card-subtitle">Active functioning stations vs offline or unknown</p>
+                                        <p class="card-subtitle">Operational universe: 9,301 active vs 312 offline and 387 planned/unknown</p>
                                     </div>
                                 </div>
                             </div>
@@ -217,7 +217,13 @@
                             </div>
                         </div>
 
-                        <div class="grid-4">
+                        <div class="grid-5">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label">Country / Fleet</label>
+                                <select id="filter-country" class="form-select">
+                                    <option value="All" selected>All Countries (Global)</option>
+                                </select>
+                            </div>
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label">State / Region</label>
                                 <select id="filter-state" class="form-select">
@@ -233,18 +239,21 @@
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label">Operational Status</label>
                                 <select id="filter-status" class="form-select">
-                                    <option value="All">All Statuses</option>
-                                    <option value="Operational">Operational Only</option>
-                                    <option value="Non-Operational">Non-Operational Only</option>
+                                    <option value="All" selected>All Statuses (10,000)</option>
+                                    <option value="Operational">Operational Only (9,301)</option>
+                                    <option value="Offline">Offline Only (312)</option>
+                                    <option value="Planned / Unknown">Planned / Unknown (387)</option>
+                                    <option value="Non-Operational">All Non-Operational (699)</option>
                                 </select>
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label">Display Sample Limit</label>
                                 <select id="filter-limit" class="form-select">
                                     <option value="500">500 Stations</option>
-                                    <option value="1000" selected>1,000 Stations</option>
+                                    <option value="1000">1,000 Stations</option>
                                     <option value="2500">2,500 Stations</option>
                                     <option value="5000">5,000 Stations</option>
+                                    <option value="10000" selected>All Stations (10,000)</option>
                                 </select>
                             </div>
                         </div>
@@ -291,6 +300,15 @@
 
                             <div class="form-group">
                                 <label class="form-label">
+                                    <span>Geographic Scope (Country / Fleet)</span>
+                                </label>
+                                <select id="opt1-country" class="form-select">
+                                    <option value="All" selected>Global Network (9,301 Operational Stations)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
                                     <span>Hub Budget (K)</span>
                                     <span id="opt1-k-val" class="form-label-value">10</span>
                                 </label>
@@ -330,14 +348,17 @@
                                 </div>
                             </div>
                             <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
-                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Problem:</strong> Where should we place a limited budget of $K$ high-power regional charging hubs to maximize the number of existing local stations within driving reach (radius $R$)?</p>
-                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Method:</strong> Candidate hub sites are chosen from real station clusters via 3D Spherical K-Means to ensure physical feasibility. The 0-1 Mixed-Integer Program is solved to guaranteed global optimality via branch-and-cut in <code style="color: var(--primary);">scipy.optimize.milp</code>.</p>
-                                <div style="display: flex; gap: 10px; margin-top: 16px;">
+                                <p style="margin-bottom: 8px;"><strong style="color: var(--text-main);">Problem & Operational Meaning:</strong> Where should we place a limited budget of K high-power charging hubs to maximize existing local stations within driving reach (radius R = 50 km)? Because 70%+ of stations offer only 1 plug, a 50 km radius (~35 min highway drive) acts as an <em>inter-urban reliability anchor</em>, providing high-throughput backup for sparse Level 2 plugs.</p>
+                                <p style="margin-bottom: 8px;"><strong style="color: var(--text-main);">Optimality & Realism Boundary:</strong> Solved to guaranteed global optimality over the representative candidate set J via branch-and-cut in <code style="color: var(--primary);">scipy.optimize.milp</code> (HiGHS). This is explicitly a <em>spatial coverage optimization</em>; it does not fabricate unobserved EV traffic, grid capacity, or land costs.</p>
+                                <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
                                     <button id="btn-opt1-k-sensitivity" class="btn btn-secondary btn-sm">
-                                        <span>📊 Generate K-Sensitivity Curve</span>
+                                        <span>📊 K-Sensitivity Curve</span>
                                     </button>
                                     <button id="btn-opt1-r-sensitivity" class="btn btn-secondary btn-sm">
-                                        <span>🌐 Generate Radius-Sensitivity Curve</span>
+                                        <span>🌐 Radius-Sensitivity Curve</span>
+                                    </button>
+                                    <button id="btn-opt1-m-sensitivity" class="btn btn-secondary btn-sm">
+                                        <span>🎯 Candidate Sensitivity (M = 25 to 400)</span>
                                     </button>
                                 </div>
                             </div>
@@ -347,16 +368,11 @@
                     <!-- Optimization 1 Output Container -->
                     <div id="opt1-results-wrapper" style="display: none;">
                         <!-- Metrics Grid -->
-                        <div class="grid-4" style="margin-bottom: 24px;">
+                        <div class="grid-5" style="margin-bottom: 24px;">
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Hubs Selected</span><div class="kpi-icon cyan">📍</div></div>
+                                <div class="kpi-top"><span class="kpi-label">Hubs Selected (K)</span><div class="kpi-icon cyan">📍</div></div>
                                 <div id="opt1-res-hubs" class="kpi-value">10</div>
                                 <div class="kpi-sub">Optimal Placements</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Coverage Radius</span><div class="kpi-icon blue">⭕</div></div>
-                                <div id="opt1-res-radius" class="kpi-value">50 km</div>
-                                <div class="kpi-sub">Great-Circle Reach</div>
                             </div>
                             <div class="kpi-card">
                                 <div class="kpi-top"><span class="kpi-label">Covered Stations</span><div class="kpi-icon green">⚡</div></div>
@@ -364,10 +380,25 @@
                                 <div class="kpi-sub"><span id="opt1-res-rate" class="pill-badge green">0%</span> of Network</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Random Baseline Gain</span><div class="kpi-icon orange">🏆</div></div>
-                                <div id="opt1-bm-improvement" class="kpi-value">+0</div>
-                                <div class="kpi-sub">vs. 100-Trial Monte Carlo (<span id="opt1-bm-random-mean">0</span>)</div>
+                                <div class="kpi-top"><span class="kpi-label">vs. Greedy Heuristic</span><div class="kpi-icon blue">⚡</div></div>
+                                <div id="opt1-bm-greedy" class="kpi-value">+0</div>
+                                <div class="kpi-sub">Greedy: <span id="opt1-bm-greedy-count">0</span> stations</div>
                             </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">vs. Random Baseline</span><div class="kpi-icon orange">🎲</div></div>
+                                <div id="opt1-bm-improvement" class="kpi-value">+0</div>
+                                <div class="kpi-sub">100-Trial Mean: <span id="opt1-bm-random-mean">0</span> (seed 42)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-top"><span class="kpi-label">Optimality Gap</span><div class="kpi-icon purple">🎯</div></div>
+                                <div id="opt1-res-gap" class="kpi-value" style="color: #10B981;">0.00%</div>
+                                <div class="kpi-sub" id="opt1-res-status">Proven Global Optimum</div>
+                            </div>
+                        </div>
+
+                        <!-- Solver Diagnostic Notice -->
+                        <div id="opt1-solver-notice" class="glass-card" style="margin-bottom: 20px; padding: 12px 18px; border-left: 3px solid #00F2FE; font-size: 12px; color: var(--text-dim);">
+                            <strong>Solver Engine:</strong> SciPy HiGHS MIP (Branch-and-Cut) • <strong>Optimality:</strong> Guaranteed global optimum with respect to candidate set &mathcal;J (|&mathcal;J| = <span id="opt1-res-candidates">100</span>).
                         </div>
 
                         <!-- Map Card with Glowing Hubs & Radius Circles -->
@@ -411,7 +442,7 @@
                     </div>
                 </section>
 
-                <!-- ================= VIEW 4: OPTIMIZATION 2 (REGIONAL EQUITY) ================= -->
+                <!-- ================= VIEW 4: OPTIMIZATION 2 (REGIONAL CONNECTOR ALLOCATION) ================= -->
                 <section id="view-opt2" class="view-section">
                     <div class="grid-3" style="margin-bottom: 24px;">
                         <!-- Controls Card -->
@@ -420,33 +451,41 @@
                                 <div class="card-title-group">
                                     <span class="icon">⚖️</span>
                                     <div>
-                                        <h3 class="card-title">MILP Parameters</h3>
-                                        <p class="card-subtitle">Max-Min Fairness Model</p>
+                                        <h3 class="card-title">Equity Policy Parameters</h3>
+                                        <p class="card-subtitle">Max-Min Fairness MILP</p>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <label class="form-label">
-                                    <span>Connector Budget (B)</span>
+                                    <span>Country / Territory Scope</span>
+                                </label>
+                                <select id="opt2-country" class="form-select">
+                                    <option value="All" selected>Global Fleet (403 States / Regions)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Regional Aggregation Scheme</span>
+                                </label>
+                                <select id="opt2-grouping" class="form-select">
+                                    <option value="state" selected>Administrative State / Province</option>
+                                    <option value="country_state">Country-State Composite</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <span>Additional Connectors Budget (B)</span>
                                     <span id="opt2-budget-val" class="form-label-value">500 Connectors</span>
                                 </label>
-                                <input type="range" id="opt2-budget" class="form-range" min="50" max="2500" step="50" value="500">
+                                <input type="range" id="opt2-budget" class="form-range" min="50" max="2000" step="25" value="500">
                             </div>
 
-                            <div style="margin-bottom: 16px;">
-                                <label class="form-label">Quick Budget Presets:</label>
-                                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
-                                    <span class="pill-badge blue budget-preset-pill" data-budget="100" style="cursor: pointer;">100</span>
-                                    <span class="pill-badge blue budget-preset-pill" data-budget="250" style="cursor: pointer;">250</span>
-                                    <span class="pill-badge blue budget-preset-pill" data-budget="500" style="cursor: pointer;">500</span>
-                                    <span class="pill-badge blue budget-preset-pill" data-budget="750" style="cursor: pointer;">750</span>
-                                    <span class="pill-badge blue budget-preset-pill" data-budget="1000" style="cursor: pointer;">1,000</span>
-                                </div>
-                            </div>
-
-                            <button id="btn-run-opt2" class="btn btn-primary btn-lg" style="width: 100%;">
-                                <span>🚀 Run Optimization 2 (MILP)</span>
+                            <button id="btn-run-opt2" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 14px;">
+                                <span>🚀 Run Equity Optimization (MILP)</span>
                             </button>
                         </div>
 
@@ -454,19 +493,19 @@
                         <div class="glass-card" style="grid-column: span 2;">
                             <div class="card-header">
                                 <div class="card-title-group">
-                                    <span class="icon">🏛️</span>
+                                    <span class="icon">📐</span>
                                     <div>
-                                        <h3 class="card-title">Resource Allocation & Max-Min Fairness Objective</h3>
-                                        <p class="card-subtitle">Raising the floor of the network's most underserved regions</p>
+                                        <h3 class="card-title">Regional Infrastructure Parity & Hardware Allocation</h3>
+                                        <p class="card-subtitle">Maximizing the minimum connectors-per-station ratio across underserved regions</p>
                                     </div>
                                 </div>
                             </div>
                             <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
-                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Problem:</strong> How should $B$ new connectors be distributed across administrative regions to ensure that the region with the lowest connectors-per-station (CPS) ratio is maximized?</p>
-                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Why Max-Min?</strong> Proportional allocation dumps the vast majority of resources into already dense regions. The Max-Min formulation mathematically guarantees that the most neglected regions receive infrastructure first.</p>
-                                <div style="margin-top: 16px;">
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">The Scarcity Bottleneck:</strong> Over 70% of stations possess only 1 connector plug, and 5 stations report 0 operational plugs, creating an initial regional floor of exactly <strong>0.0000 CPS</strong>. Deploying extra plugs proportionally only widens the chasm between well-funded hubs and deprived corridors.</p>
+                                <p style="margin-bottom: 10px;"><strong style="color: var(--text-main);">Max-Min Fairness Formulation:</strong> We maximize the lowest regional connectors-per-station ratio <strong>t*</strong> subject to <code>(C<sub>i</sub> + x<sub>i</sub>) / S<sub>i</sub> &ge; t* &rArr; C<sub>i</sub> + x<sub>i</sub> &ge; t* &times; S<sub>i</sub></code> and budget constraint <code>&sum; x<sub>i</sub> = B</code>, where <code>x<sub>i</sub> &isin; &#8484;<sub>&ge; 0</sub></code>. This mathematically guarantees that every single plug is prioritized to lift the most deprived regions first.</p>
+                                <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;">
                                     <button id="btn-opt2-sensitivity" class="btn btn-secondary btn-sm">
-                                        <span>📈 Generate Budget Sensitivity & Monotonicity Curve</span>
+                                        <span>📈 Generate Budget-Sensitivity Curve (B = 50 to 2000)</span>
                                     </button>
                                 </div>
                             </div>
@@ -478,66 +517,72 @@
                         <!-- Metrics Grid -->
                         <div class="grid-4" style="margin-bottom: 24px;">
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Connector Budget</span><div class="kpi-icon blue">📦</div></div>
-                                <div id="opt2-res-budget" class="kpi-value">500</div>
-                                <div class="kpi-sub">100% Utilized</div>
+                                <div class="kpi-top"><span class="kpi-label">Guaranteed Min CPS Floor (t*)</span><div class="kpi-icon green">🎯</div></div>
+                                <div id="opt2-res-min-cps" class="kpi-value">1.2127</div>
+                                <div class="kpi-sub"><span id="opt2-res-initial-cps" class="pill-badge orange">Baseline: 0.0000</span></div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Pre-Opt Minimum CPS</span><div class="kpi-icon orange">📉</div></div>
-                                <div id="opt2-res-initial-cps" class="kpi-value">1.0000</div>
-                                <div class="kpi-sub">Worst Regional Floor</div>
+                                <div class="kpi-top"><span class="kpi-label">Absolute Network Floor Gain</span><div class="kpi-icon cyan">📈</div></div>
+                                <div id="opt2-res-cps-gain" class="kpi-value">+1.2127</div>
+                                <div class="kpi-sub">Connectors / Station Floor</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Optimized Floor CPS</span><div class="kpi-icon green">📈</div></div>
-                                <div id="opt2-res-final-cps" class="kpi-value">1.2127</div>
-                                <div class="kpi-sub"><span id="opt2-res-delta" class="pill-badge green">+0.2127</span> Improvement</div>
+                                <div class="kpi-top"><span class="kpi-label">Funded Under-Equipped Regions</span><div class="kpi-icon blue">🏛️</div></div>
+                                <div id="opt2-res-targeted-count" class="kpi-value">247</div>
+                                <div class="kpi-sub">of <span id="opt2-res-total-regions">403</span> Modeled Regions</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-top"><span class="kpi-label">Prop. Baseline CPS</span><div class="kpi-icon pink">⚖️</div></div>
-                                <div id="opt2-res-baseline-cps" class="kpi-value">1.0000</div>
-                                <div class="kpi-sub">Targeted Regions: <span id="opt2-res-targeted-count">0</span></div>
+                                <div class="kpi-top"><span class="kpi-label">Gain Over Proportional</span><div class="kpi-icon pink">🏆</div></div>
+                                <div id="opt2-res-baseline-advantage" class="kpi-value">+1.2127</div>
+                                <div class="kpi-sub">vs. Proportional Floor (<span id="opt2-res-prop-cps">0.0000</span>)</div>
                             </div>
                         </div>
 
-                        <!-- Before vs After Comparison Chart -->
+                        <!-- Charts Grid: Before/After CPS Bar Chart -->
                         <div class="glass-card" style="margin-bottom: 24px;">
                             <div class="card-header">
                                 <div class="card-title-group">
                                     <span class="icon">📊</span>
                                     <div>
-                                        <h3 class="card-title">Before vs. After: Connectors-Per-Station (CPS) Across Targeted Regions</h3>
-                                        <p class="card-subtitle">Green bars represent final elevated ratios after optimal MILP allocation</p>
+                                        <h3 class="card-title">Connectors-Per-Station (CPS) Impact: Top Targeted Regions</h3>
+                                        <p class="card-subtitle">Comparison of Initial CPS vs. Max-Min Optimized CPS vs. Proportional Allocation Benchmark</p>
                                     </div>
                                 </div>
                                 <span id="opt2-res-time" class="pill-badge cyan">0.00s runtime</span>
                             </div>
-                            <div style="height: 360px;">
-                                <canvas id="chart-opt2-cps-comparison"></canvas>
+                            <div style="height: 320px;">
+                                <canvas id="chart-opt2-comparison"></canvas>
                             </div>
                         </div>
 
-                        <!-- Regional Allocation Table -->
-                        <div class="glass-card" style="margin-bottom: 24px;">
+                        <!-- Sensitivity Chart Container -->
+                        <div id="opt2-sensitivity-chart-wrapper" class="glass-card" style="display: none; margin-bottom: 24px;">
                             <div class="card-header">
-                                <h3 class="card-title">Complete Regional Allocation Breakdown</h3>
-                            </div>
-                            <div id="opt2-allocations-table-container"></div>
-                        </div>
-                    </div>
-
-                    <!-- Budget Sensitivity Chart -->
-                    <div id="opt2-sensitivity-chart-wrapper" class="glass-card" style="display: none; margin-bottom: 24px;">
-                        <div class="card-header">
-                            <div class="card-title-group">
-                                <span class="icon">📉</span>
-                                <div>
-                                    <h3 class="card-title">Budget vs. Minimum CPS Monotonicity Curve</h3>
-                                    <p class="card-subtitle">Optimal Max-Min MILP floor vs naive Hamilton Proportional allocation</p>
+                                <div class="card-title-group">
+                                    <span class="icon">📈</span>
+                                    <div>
+                                        <h3 class="card-title">Budget Sensitivity Analysis (B = 50 to 2,000 Connectors)</h3>
+                                        <p class="card-subtitle">Proof of strict monotonicity: Every budget increase strictly lifts the minimum hardware floor</p>
+                                    </div>
                                 </div>
                             </div>
+                            <div style="height: 320px;">
+                                <canvas id="chart-opt2-sensitivity"></canvas>
+                            </div>
                         </div>
-                        <div style="height: 340px;">
-                            <canvas id="chart-opt2-budget-sensitivity"></canvas>
+
+                        <!-- Comprehensive Regional Allocation Table -->
+                        <div class="glass-card" style="margin-bottom: 24px;">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <span class="icon">📋</span>
+                                    <div>
+                                        <h3 class="card-title">Regional Connector Allocation Audit Table</h3>
+                                        <p class="card-subtitle">Showing all regions receiving additional plugs under the optimal equity policy</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="opt2-allocation-table-container"></div>
                         </div>
                     </div>
                 </section>
@@ -612,16 +657,16 @@
                             </div>
 
                             <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                                <h4 style="color: var(--secondary); margin-bottom: 10px; font-size: 1.05rem;">⚖️ Optimization 2 — Max-Min Fairness MILP</h4>
-                                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"><strong>Syllabus Category:</strong> Mixed-Integer Linear Programming (Resource Allocation / Sensitivity Analysis)</p>
+                                <h4 style="color: var(--secondary); margin-bottom: 10px; font-size: 1.05rem;">⚖️ Optimization 2 — Regional Connector Allocation (Max-Min Fairness MILP)</h4>
+                                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"><strong>Syllabus Category:</strong> Mixed-Integer Linear Programming / Equity & Bottleneck Optimization</p>
                                 <div style="font-family: var(--font-mono); font-size: 0.82rem; background: rgba(0,0,0,0.4); padding: 14px; border-radius: 8px; margin-bottom: 12px; line-height: 1.7;">
-                                    <strong>Maximize:</strong> Z = t<br>
+                                    <strong>Maximize:</strong> t<br>
                                     <strong>Subject to:</strong><br>
-                                    &bull; (C<sub>i</sub> + x<sub>i</sub>) / S<sub>i</sub> &ge; t &nbsp; &forall; i (Fairness floor)<br>
-                                    &bull; &Sigma; x<sub>i</sub> = B &nbsp; (Connector budget)<br>
-                                    &bull; x<sub>i</sub> &ge; 0 and integer, &nbsp; t &ge; 0
+                                    &bull; C<sub>i</sub> + x<sub>i</sub> &ge; t &middot; S<sub>i</sub> &nbsp; &forall; region i &nbsp; (Fairness floor)<br>
+                                    &bull; &Sigma; x<sub>i</sub> = B &nbsp; (Capital connector budget)<br>
+                                    &bull; x<sub>i</sub> &ge; 0 &nbsp; (Integer plugs), &nbsp; t &ge; 0 &nbsp; (Continuous)
                                 </div>
-                                <p style="font-size: 0.82rem; color: var(--text-dim);">Guarantees Pareto-optimal resource allocation elevating the lowest regional ratio.</p>
+                                <p style="font-size: 0.82rem; color: var(--text-dim);">Lifts the minimum regional connectors-per-station ratio from 0.0000 to 1.2127 with B=500, funding 247 underserved regions.</p>
                             </div>
                         </div>
                     </div>
