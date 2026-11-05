@@ -311,8 +311,8 @@ Operations Research/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/RishiRaajhaA/ev-charging-optimization.git
-cd ev-charging-optimization
+git clone https://github.com/RishiRaajhaA/ev-charging-infrastructure-optimization.git
+cd ev-charging-infrastructure-optimization
 ```
 
 ### 2. Set Up Virtual Environment
