@@ -47,3 +47,18 @@ desktop.ini
 # Environment Variables & Logs
 .env
 *.log
+
+# LaTeX and Document Artifacts
+*.tex
+*.pdf
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Markdown Reports (except root README.md)
+*/**/*.md

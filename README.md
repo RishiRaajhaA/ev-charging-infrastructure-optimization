@@ -18,8 +18,8 @@
 3. [Dual Interactive User Interfaces](#-dual-interactive-user-interfaces)
 4. [Visual Showcase](#-visual-showcase)
 5. [Mathematical Formulations](#-mathematical-formulations)
-   - [Optimization 1: Spherical K-Means & Maximum Coverage MIP](#optimization-1--strategic-charging-hub-location-maximum-coverage-mip)
-   - [Optimization 2: Tactical Technician Repair Dispatch MILP](#optimization-2--tactical-technician-repair-dispatch-constrained-assignment-milp)
+   - [Optimization 1: Spherical K-Means & Maximum Coverage MIP](#optimization-1--maximum-existing-station-coverage-hub-selection)
+   - [Optimization 2: Regional Connector Allocation MILP](#optimization-2--regional-infrastructure-connector-allocation-max-min-fairness-milp)
 6. [Exploratory Data Analysis (EDA)](#-exploratory-data-analysis-eda)
 7. [Validation & Sensitivity Suite](#-validation--sensitivity-suite)
 8. [Repository Architecture](#-repository-architecture)
@@ -198,7 +198,7 @@ Where:
 
 ## 🔍 Exploratory Data Analysis (EDA)
 
-The project includes an in-depth exploratory analysis in [`eda/EDA.ipynb`](eda/EDA.ipynb) and [`eda/EDA_Process.md`](eda/EDA_Process.md):
+The project includes an in-depth exploratory analysis in [`eda/EDA.ipynb`](eda/EDA.ipynb):
 
 <p align="center">
   <img src="assets/dataset_geo_map.png" width="48%" alt="Geographic Distribution">
@@ -223,10 +223,11 @@ Independent verification scripts validate the solver outputs against theoretical
 - **Random Baseline Comparison**: The MIP model achieves **3,278 covered stations** ($K=10, R=50\text{ km}, M=100$) out of $10,000$ ($32.78\%$), lying $6.17$ standard deviations above the 100-trial random baseline mean of **474.7 stations** (range $[39, 1996]$, $Z = 6.17$).
 
 ### 2. Model 2 Validation (`optimization/validation/validation_optimization_2.py`)
-- **Constraint Satisfaction**: 100% of capacity and SLA distance constraints verified across all depots and stations.
-- **Zero-Tolerance Bounds**: When $D_{\max} = 0$, exactly 0 stations assigned; when capacity $K_i = 0$, exactly 0 stations assigned.
-- **Monotonic SLA Scaling**: Proved that increasing $D_{\max}$ from $25\text{ km}$ to $500\text{ km}$ monotonically expands connector recovery from 0 to 12 in the US fleet benchmark.
-- **Exact Integrality**: $x_{ij}, z_j \in \{0, 1\}$ strictly verified with zero non-binary leakage.
+- **Exact Budget Conservation**: Verified $\sum x_i = B$ across all budget tiers ($B \in [50, 1000]$).
+- **Physical Non-Negativity & Integrality**: Guaranteed $x_i \ge 0, x_i \in \mathbb{Z}$ with zero fractional connector leakage.
+- **Fairness Floor Enforcement**: Verified $C_i + x_i \ge t \cdot S_i$ strictly holds for all administrative regions.
+- **Strict Floor Monotonicity**: Proved that the guaranteed minimum regional ratio $t^*(B)$ is non-decreasing with capital budget ($t^*(50) = 1.0000 \to t^*(1000) = 1.3124\text{ CPS}$).
+- **Equity Lift vs. Proportional Baseline**: At $B = 500$, Max-Min elevates the minimum regional floor to **1.2127 CPS** across 247 under-equipped regions, whereas proportional distribution leaves the floor trapped at **0.0000 CPS**.
 
 ---
 
@@ -236,12 +237,11 @@ Independent verification scripts validate the solver outputs against theoretical
 Operations Research/
 ├── app.py                                   # Streamlit Interactive Dashboard
 ├── run_web_app.py                           # 1-Click Root Launcher for Full-Stack Suite
+├── check.py                                 # Spatial Density & Candidate Generation Script
+├── generate_dataset_visuals.py              # Visual Chart Generation Script
 ├── requirements.txt                         # Unified Python Dependencies
 ├── README.md                                # Comprehensive Project Documentation
-├── .gitignore                               # Git Rules for Python & Build Artifacts
-├── generate_dataset_visuals.py              # Visual Chart Generation Script
-├── First_Review_Presentation.md             # Review Presentation Notes
-├── mid_review_presentation.tex              # LaTeX Beamer Mid-Review Slide Deck
+├── .gitignore                               # Git Rules for Python, Build Artifacts & LaTeX
 │
 ├── assets/                                  # High-Res Screenshots & Visual Assets
 │   ├── Executive Network Dashboard.png
@@ -253,22 +253,29 @@ Operations Research/
 │   ├── dataset_geo_map.png
 │   └── dataset_top_regions.png
 │
+├── images/                                  # Methodology Diagrams & Core Result Visuals
+│   ├── Dashboard.png
+│   ├── Geospatial_Studio.png
+│   ├── OR_Methodology.png
+│   ├── Optimization1.png
+│   ├── Optimization1_Hubs.png
+│   ├── Optimization2.png
+│   ├── Optimization2_CPS.png
+│   └── methodology.png
+│
 ├── data/
-│   └── ev_stations_2025.csv                 # Core EV Charging Stations Dataset
+│   └── ev_stations_2025.csv                 # Core Global EV Charging Stations Dataset
 │
 ├── eda/
-│   ├── EDA.ipynb                            # Comprehensive Exploratory Data Analysis Notebook
-│   └── EDA_Process.md                       # Structured EDA Documentation & Findings
+│   └── EDA.ipynb                            # Comprehensive Exploratory Data Analysis Notebook
 │
 ├── optimization/
-│   ├── optimization_1_hub_location.py       # Spherical K-Means + MIP Hub Location Solver (Growth)
-│   ├── optimization_2_technician_dispatch.py # Constrained MILP Technician Repair Dispatch Solver (Recovery)
-│   ├── optimization_2_connector_allocation.py# Max-Min Regional Fairness Solver (Legacy Baseline)
+│   ├── optimization_1_hub_location.py       # Spherical K-Means + MCLP Hub Location Solver (Growth)
+│   ├── optimization_2_connector_allocation.py# Max-Min Fairness Regional Allocation MILP (Equity)
+│   ├── optimization_2_technician_dispatch.py # Constrained MILP Technician Repair Dispatch Solver
 │   └── validation/
 │       ├── validation_optimization_1.py     # Opt 1 Validation Suite & Baseline Benchmarking
-│       ├── validation_optimization_2.py     # Opt 2 Validation Suite (100% Constraints Passed)
-│       ├── optimization_1_validation_results.md
-│       └── optimization_2_validation_results.md
+│       └── validation_optimization_2.py     # Opt 2 Validation Suite & Fairness Floor Verification
 │
 ├── outputs/
 │   └── maps/                                # Exported Geo-visualizations & Coverage Maps
